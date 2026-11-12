@@ -4,6 +4,8 @@
 @inject IJSRuntime JS
 @inject ToastService Toasts
 @inject NavigationManager Nav
+@inject AuthService Auth
+@inject SyncService Sync
 
 <PageTitle>Perfil · BJJ Journal</PageTitle>
 
@@ -29,6 +31,36 @@
             </div>
         </div>
     </div>
+
+    @if (Auth.IsConfigured)
+    {
+        <div class="card form">
+            <h2>Cuenta</h2>
+            @if (Auth.Session is { } session)
+            {
+                <div class="account">
+                    <span class="sync-dot @(Sync.LastError is null ? "" : "err")"></span>
+                    <div style="min-width:0; flex:1">
+                        <div style="font-weight:600; overflow:hidden; text-overflow:ellipsis">@(session.Email ?? "Cuenta conectada")</div>
+                        <div class="small muted">@(Sync.LastError ?? (Sync.LastSyncAt is { } at ? $"Sincronizado a las {at.ToLocalTime():HH:mm}" : "Sincronizado con la nube"))</div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button class="btn" @onclick="SyncNowAsync"><Icon Name="upload" />Sincronizar ahora</button>
+                    <button class="btn danger" @onclick="SignOutAsync">Cerrar sesión</button>
+                </div>
+                @if (_confirmSignOut)
+                {
+                    <div class="small" style="color:var(--warn)">Al cerrar sesión se borran los datos de este dispositivo. Siguen en tu cuenta. Pulsa otra vez para confirmar.</div>
+                }
+            }
+            else
+            {
+                <p class="small muted" style="margin:0">Estás usando la app sin cuenta: los datos solo están en este dispositivo. Inicia sesión para guardarlos en la nube y tenerlos en el móvil y el ordenador.</p>
+                <a class="btn primary" href="acceso">Iniciar sesión o crear cuenta</a>
+            }
+        </div>
+    }
 
     <div class="card form">
         <h2>Datos</h2>
@@ -104,6 +136,28 @@
     private string? _error;
     private ImportPreview? _preview;
     private string? _json;
+
+    private bool _confirmSignOut;
+
+    private async Task SyncNowAsync()
+    {
+        var result = await Sync.SyncAsync();
+        Toasts.Show(result.IsSuccess ? "Sincronizado" : result.Error!);
+    }
+
+    private async Task SignOutAsync()
+    {
+        if (!_confirmSignOut)
+        {
+            _confirmSignOut = true;
+            return;
+        }
+
+        await Sync.SyncAsync();
+        await Auth.SignOutAsync();
+        await Sync.ClearLocalAsync();
+        Nav.NavigateTo("acceso", forceLoad: true);
+    }
 
     private string Initial => string.IsNullOrWhiteSpace(_saved.DisplayName) ? "?" : _saved.DisplayName.Trim()[..1].ToUpperInvariant();
 

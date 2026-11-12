@@ -310,3 +310,14 @@ input:focus-visible, button:focus-visible, select:focus-visible, textarea:focus-
   .list.cols { display: grid; grid-template-columns: 1fr 1fr; column-gap: 32px; }
   .list.cols > .item:nth-child(2) { border-top: 0; }
 }
+
+/* ---------- Acceso ---------- */
+.btn.google { background: #fff; color: #1f2937; border-color: #fff; }
+:root[data-theme="light"] .btn.google { border-color: var(--line); }
+.divider { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; }
+.divider::before, .divider::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
+.link-btn { background: none; border: 0; padding: 4px 0; color: var(--accent); cursor: pointer; font-size: 14px; font-weight: 500; }
+.account { display: flex; align-items: center; gap: 14px; }
+.sync-dot { width: 8px; height: 8px; border-radius: 4px; background: var(--accent); display: inline-block; flex: 0 0 8px; }
+.sync-dot.off { background: var(--muted); }
+.sync-dot.err { background: var(--warn); }

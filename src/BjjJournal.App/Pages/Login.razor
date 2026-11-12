@@ -1,0 +1,127 @@
+@page "/acceso"
+@layout BareLayout
+@inject AuthService Auth
+@inject SyncService Sync
+@inject NavigationManager Nav
+
+<PageTitle>Acceso · BJJ Journal</PageTitle>
+
+<div class="onboard">
+    <img class="logo" src="icon.svg" alt="" />
+    <h1>@(_register ? "Crea tu cuenta" : "Entra en BJJ Journal")</h1>
+    <p class="muted" style="margin:0">Con una cuenta, tu diario se guarda en la nube y lo tienes en el móvil y en el ordenador.</p>
+
+    <button type="button" class="btn google wide big-btn" disabled="@_busy" @onclick="Google"><GoogleLogo />Continuar con Google</button>
+    <div class="divider">o con tu correo</div>
+
+    <form class="form" @onsubmit="SubmitAsync" @onsubmit:preventDefault>
+        <label class="field">Correo<input id="email" type="email" autocomplete="email" @bind="_email" placeholder="tu@correo.com" /></label>
+        <label class="field">Contraseña<input id="password" type="password" autocomplete="@(_register ? "new-password" : "current-password")" @bind="_password" placeholder="@(_register ? "Mínimo 6 caracteres" : "")" /></label>
+        @if (_error is not null) { <div class="error" role="alert">@_error</div> }
+        @if (_info is not null) { <div class="small accent" role="status">@_info</div> }
+        <button type="submit" class="btn primary big-btn" disabled="@_busy">@(_busy ? "Un momento…" : _register ? "Crear cuenta" : "Entrar")</button>
+    </form>
+
+    <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap" class="small">
+        <button type="button" class="link-btn" @onclick="() => { _register = !_register; _error = null; _info = null; }">
+            @(_register ? "Ya tengo cuenta" : "Crear una cuenta")
+        </button>
+        @if (!_register)
+        {
+            <button type="button" class="link-btn" @onclick="ResetAsync">He olvidado la contraseña</button>
+        }
+    </div>
+
+    <button type="button" class="btn ghost" @onclick="GuestAsync">Continuar sin cuenta</button>
+    <p class="small muted" style="margin:0">Sin cuenta, los datos se guardan solo en este dispositivo. Puedes iniciar sesión más tarde desde Perfil y se subirán.</p>
+</div>
+
+@code {
+    private string _email = "";
+    private string _password = "";
+    private bool _register;
+    private bool _busy;
+    private string? _error;
+    private string? _info;
+
+    [SupplyParameterFromQuery(Name = "error")] public string? QueryError { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (!Auth.IsConfigured)
+        {
+            Nav.NavigateTo("./", replace: true);
+            return;
+        }
+
+        _error = QueryError;
+    }
+
+    private void Google() => Nav.NavigateTo(Auth.GetGoogleUrl(Nav.BaseUri), forceLoad: true);
+
+    private async Task SubmitAsync()
+    {
+        _busy = true;
+        _error = null;
+        _info = null;
+        try
+        {
+            if (_register)
+            {
+                var result = await Auth.SignUpAsync(_email, _password, Nav.BaseUri);
+                if (!result.IsSuccess)
+                {
+                    _error = result.Error;
+                    return;
+                }
+
+                if (!result.Value)
+                {
+                    _info = $"Te hemos enviado un correo a {_email.Trim()}. Abre el enlace para activar la cuenta y vuelve aquí para entrar.";
+                    _register = false;
+                    return;
+                }
+            }
+            else
+            {
+                var result = await Auth.SignInAsync(_email, _password);
+                if (!result.IsSuccess)
+                {
+                    _error = result.Error;
+                    return;
+                }
+            }
+
+            await Sync.SyncAsync();
+            Nav.NavigateTo("./", replace: true);
+        }
+        catch (HttpRequestException)
+        {
+            _error = "No hay conexión con el servidor. Inténtalo de nuevo o continúa sin cuenta.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task ResetAsync()
+    {
+        _error = null;
+        var result = await Auth.SendPasswordResetAsync(_email, Nav.BaseUri);
+        if (result.IsSuccess)
+        {
+            _info = "Si existe una cuenta con ese correo, te llegará un enlace para entrar y cambiar la contraseña.";
+        }
+        else
+        {
+            _error = result.Error;
+        }
+    }
+
+    private async Task GuestAsync()
+    {
+        await Auth.SetGuestAsync(true);
+        Nav.NavigateTo("./", replace: true);
+    }
+}

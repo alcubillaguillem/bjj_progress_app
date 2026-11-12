@@ -5,6 +5,7 @@ using BjjJournal.Application.Abstractions;
 using BjjJournal.Application.Persistence;
 using BjjJournal.Application.Services;
 using BjjJournal.Infrastructure.Storage;
+using BjjJournal.Infrastructure.Supabase;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 
@@ -19,6 +20,17 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 // En Blazor WebAssembly "singleton" y "scoped" viven lo mismo: toda la pestaña.
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IAppDataStore, LocalStorageDataStore>();
+builder.Services.AddSingleton<IKeyValueStore, LocalStorageKeyValueStore>();
+
+// Cuentas y sincronización (Supabase). Sin configuración, la app funciona solo en local.
+var supabase = builder.Configuration.GetSection("Supabase").Get<SupabaseOptions>() ?? new SupabaseOptions();
+builder.Services.AddSingleton(supabase);
+builder.Services.AddSingleton(new HttpClient());
+builder.Services.AddSingleton<IAuthApi, SupabaseAuthApi>();
+builder.Services.AddSingleton<IRemoteJournalStore, SupabaseJournalStore>();
+builder.Services.AddSingleton<AuthService>();
+builder.Services.AddSingleton<SyncService>();
+builder.Services.AddSingleton<SyncCoordinator>();
 builder.Services.AddSingleton<JournalContext>();
 builder.Services.AddSingleton<ProfileService>();
 builder.Services.AddSingleton<PositionService>();

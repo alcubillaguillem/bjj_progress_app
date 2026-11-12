@@ -22,16 +22,22 @@ public sealed class JournalContext(IAppDataStore store)
         return _data;
     }
 
-    public async Task SaveAsync(CancellationToken ct = default)
+    public Task SaveAsync(CancellationToken ct = default) => SaveAsync(notify: true, ct);
+
+    /// <summary>Sustituye todo el diario. Con notify = false no lanza Changed (lo usa la sincronización).</summary>
+    public async Task ReplaceAsync(AppData data, bool notify = true, CancellationToken ct = default)
+    {
+        _data = data;
+        await SaveAsync(notify, ct);
+    }
+
+    private async Task SaveAsync(bool notify, CancellationToken ct)
     {
         var data = await GetAsync(ct);
         await store.WriteAsync(AppDataSerializer.Serialize(data), ct);
-        Changed?.Invoke();
-    }
-
-    public async Task ReplaceAsync(AppData data, CancellationToken ct = default)
-    {
-        _data = data;
-        await SaveAsync(ct);
+        if (notify)
+        {
+            Changed?.Invoke();
+        }
     }
 }

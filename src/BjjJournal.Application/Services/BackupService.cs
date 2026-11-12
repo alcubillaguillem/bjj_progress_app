@@ -59,7 +59,7 @@ public sealed class BackupService(JournalContext context, TimeProvider time)
         incoming.ExportedAt = null;
         if (mode == ImportMode.Replace)
         {
-            await context.ReplaceAsync(incoming, ct);
+            await context.ReplaceAsync(incoming, notify: true, ct);
             return Result.Ok();
         }
 

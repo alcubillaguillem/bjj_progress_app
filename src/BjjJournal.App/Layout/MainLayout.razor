@@ -1,5 +1,9 @@
 @inherits LayoutComponentBase
+@implements IDisposable
 @inject ProfileService Profiles
+@inject AuthService Auth
+@inject SyncService Sync
+@inject SyncCoordinator Coordinator
 @inject NavigationManager Nav
 
 @if (!_ready)
@@ -19,7 +23,10 @@ else
                 <NavLink class="nav-btn" href="cinturon" ActiveClass="active"><Icon Name="belt" />Cinturón</NavLink>
                 <NavLink class="nav-btn" href="perfil" ActiveClass="active"><Icon Name="user" />Perfil</NavLink>
             </nav>
-            <div class="side-foot">Datos guardados solo en este dispositivo.</div>
+            <a class="side-foot" href="perfil" style="display:flex; gap:8px; align-items:center; color:var(--muted)">
+                <span class="sync-dot @(Auth.IsSignedIn ? (Sync.LastError is null ? "" : "err") : "off")"></span>
+                <span>@SyncLabel</span>
+            </a>
         </aside>
 
         <main class="content">
@@ -40,8 +47,44 @@ else
 @code {
     private bool _ready;
 
+    private string SyncLabel => !Auth.IsSignedIn
+        ? "Solo en este dispositivo"
+        : Sync.IsSyncing ? "Sincronizando…"
+        : Sync.LastError ?? $"Sincronizado · {Auth.Session!.Email}";
+
     protected override async Task OnInitializedAsync()
     {
+        Auth.Changed += Refresh;
+        Sync.StatusChanged += Refresh;
+
+        if (Auth.IsConfigured)
+        {
+            var hadTokens = Nav.Uri.Contains("access_token=", StringComparison.Ordinal) || Nav.Uri.Contains("error_description=", StringComparison.Ordinal);
+            var error = await Auth.InitializeAsync(Nav.Uri);
+            if (error is not null)
+            {
+                Nav.NavigateTo($"acceso?error={Uri.EscapeDataString(error)}", replace: true);
+                return;
+            }
+
+            if (hadTokens)
+            {
+                // Quita los tokens de la barra de direcciones tras volver de Google.
+                Nav.NavigateTo("./", replace: true);
+            }
+
+            if (!Auth.IsSignedIn && !await Auth.IsGuestAsync())
+            {
+                Nav.NavigateTo("acceso", replace: true);
+                return;
+            }
+
+            if (Auth.IsSignedIn)
+            {
+                await Sync.SyncAsync();
+            }
+        }
+
         if (!await Profiles.IsOnboardedAsync())
         {
             Nav.NavigateTo("bienvenida", replace: true);
@@ -49,5 +92,13 @@ else
         }
 
         _ready = true;
+    }
+
+    private void Refresh() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Auth.Changed -= Refresh;
+        Sync.StatusChanged -= Refresh;
     }
 }

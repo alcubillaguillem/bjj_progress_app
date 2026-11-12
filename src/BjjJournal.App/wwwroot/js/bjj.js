@@ -1,7 +1,7 @@
 // Única pieza en JavaScript: acceso a localStorage, descarga de ficheros y tema. Toda la lógica está en C#.
 window.bjjStorage = {
   get: (key) => { try { return localStorage.getItem(key); } catch { return null; } },
-  set: (key, value) => { try { localStorage.setItem(key, value); } catch (e) { console.warn("No se pudo guardar", e); } }
+  set: (key, value) => { try { if (value === null || value === undefined) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch (e) { console.warn("No se pudo guardar", e); } }
 };
 window.bjjFiles = {
   download: (name, mime, text) => {

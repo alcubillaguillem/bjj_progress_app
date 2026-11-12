@@ -22,6 +22,13 @@ App web instalable (PWA) hecha íntegramente en C# con **.NET 10 + Blazor WebAss
 | Exportar/importar JSON versionado, con revisión de duplicados y fusionar o reemplazar | `/perfil` |
 | Tema oscuro (por defecto) y claro | `/perfil` |
 
+## Cuentas y sincronización
+
+Inicio de sesión con correo y contraseña o con Google (Supabase Auth, proyecto `bjj-journal`). Con cuenta, el diario se sincroniza con la tabla `public.bjj_journals` (un documento JSON por usuario, protegido con RLS; ver `supabase/001_bjj_journals.sql`). La fusión es entidad a entidad y gana el `UpdatedAt` más reciente. Sin cuenta, la app sigue funcionando solo en local.
+
+- Cliente HTTP propio en C# (`Infrastructure/Supabase`), sin SDK de JavaScript.
+- Configuración en `src/BjjJournal.App/wwwroot/appsettings.json` (URL y clave publicable, que es pública por diseño).
+
 ## Arquitectura
 
 ```
@@ -55,7 +62,7 @@ tests/
 Requiere el SDK de .NET 10.
 
 ```bash
-dotnet test                              # 70 tests
+dotnet test                              # 90 tests
 dotnet run --project src/BjjJournal.App  # abre la URL que muestra la consola
 ```
 
