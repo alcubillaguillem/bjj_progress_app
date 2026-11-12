@@ -1,0 +1,167 @@
+@page "/perfil"
+@inject ProfileService Profiles
+@inject BackupService Backup
+@inject IJSRuntime JS
+@inject ToastService Toasts
+@inject NavigationManager Nav
+
+<PageTitle>Perfil · BJJ Journal</PageTitle>
+
+@if (_p is null)
+{
+    return;
+}
+
+<div class="view narrow">
+    <h1 class="title">Perfil</h1>
+
+    <div class="card hero">
+        <div style="display:flex; align-items:center; gap:14px">
+            <div style="width:56px; height:56px; border-radius:50%; display:grid; place-items:center; font:700 22px var(--num); background:var(--accent); color:var(--accent-text)">@Initial</div>
+            <div style="min-width:0">
+                <div style="font-weight:600; font-size:18px">@_saved.DisplayName</div>
+                <div class="small muted">@Labels.Of(_saved.Belt) · @_saved.Stripes @(_saved.Stripes == 1 ? "grado" : "grados")@(_saved.GymName is null ? "" : $" · {_saved.GymName}")</div>
+            </div>
+        </div>
+        <div class="belt-bar" style="background:@Labels.BeltColor(_saved.Belt)">
+            <div style="position:absolute; right:12px; top:0; bottom:0; width:56px; background:@(_saved.Belt == Belt.Black ? "#dc2626" : "#111"); display:flex; gap:5px; justify-content:center">
+                @for (var i = 0; i < _saved.Stripes; i++) { <span style="width:5px; background:#f4f4f5"></span> }
+            </div>
+        </div>
+    </div>
+
+    <div class="card form">
+        <h2>Datos</h2>
+        <label class="field">Nombre<input @bind="_p.DisplayName" /></label>
+        <div class="field-row">
+            <label class="field">Cinturón
+                <select @bind="_p.Belt">
+                    @foreach (var b in Enum.GetValues<Belt>()) { <option value="@b">@Labels.Of(b)</option> }
+                </select>
+            </label>
+            <label class="field">Grados
+                <select @bind="_p.Stripes">
+                    @for (var i = 0; i <= 4; i++) { <option value="@i">@i</option> }
+                </select>
+            </label>
+        </div>
+        <div class="field-row">
+            <label class="field">Gimnasio<input @bind="_p.GymName" /></label>
+            <label class="field">Empecé a entrenar<input type="date" @bind="_p.StartedTraining" /></label>
+        </div>
+        @if (_error is not null) { <div class="error">@_error</div> }
+        <button class="btn primary" @onclick="SaveAsync"><Icon Name="check" />Guardar</button>
+    </div>
+
+    <div class="card form">
+        <h2>Apariencia</h2>
+        <div class="segmented">
+            <button type="button" class="@(_theme == "dark" ? "on" : "")" @onclick="@(() => SetThemeAsync("dark"))"><Icon Name="moon" /> Oscuro</button>
+            <button type="button" class="@(_theme == "light" ? "on" : "")" @onclick="@(() => SetThemeAsync("light"))"><Icon Name="sun" /> Claro</button>
+        </div>
+    </div>
+
+    <div class="card form">
+        <h2>Copia de seguridad</h2>
+        <p class="small muted" style="margin:0">Los datos viven solo en este navegador. Exporta un JSON de vez en cuando o para pasarlos a otro dispositivo.</p>
+        <button class="btn" @onclick="ExportAsync"><Icon Name="download" />Exportar JSON</button>
+        <label class="btn" style="cursor:pointer"><Icon Name="upload" />Importar JSON
+            <InputFile OnChange="OnFileAsync" accept=".json,application/json" style="display:none" />
+        </label>
+
+        @if (_preview is not null)
+        {
+            <div class="sub-card">
+                <strong>Revisa antes de importar</strong>
+                <div class="stat-line">
+                    <span><strong>@_preview.Sessions</strong> sesiones</span>
+                    <span><strong>@_preview.Techniques</strong> técnicas</span>
+                    <span><strong>@_preview.Positions</strong> posiciones</span>
+                </div>
+                @if (_preview.DuplicateTechniques + _preview.DuplicateSessions > 0)
+                {
+                    <div class="small" style="color:var(--warn)">Duplicados: @_preview.DuplicateTechniques técnicas y @_preview.DuplicateSessions sesiones ya existen. Al fusionar no se repiten.</div>
+                }
+                <div class="form-actions">
+                    <button class="btn primary" @onclick="() => ImportAsync(ImportMode.Merge)">Fusionar</button>
+                    <button class="btn danger" @onclick="() => ImportAsync(ImportMode.Replace)">Reemplazar todo</button>
+                    <button class="btn ghost" @onclick="() => { _preview = null; _json = null; }">Cancelar</button>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="card">
+        <h2>Acerca de</h2>
+        <p class="small muted" style="margin:0">BJJ Journal · Trabajo final de C# · .NET 10 + Blazor WebAssembly. Funciona sin conexión y se puede instalar en el móvil («Añadir a pantalla de inicio») y en el ordenador.</p>
+    </div>
+</div>
+
+@code {
+    private ProfileInput? _p;
+    private ProfileInput _saved = new();
+    private string _theme = "dark";
+    private string? _error;
+    private ImportPreview? _preview;
+    private string? _json;
+
+    private string Initial => string.IsNullOrWhiteSpace(_saved.DisplayName) ? "?" : _saved.DisplayName.Trim()[..1].ToUpperInvariant();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _p = await Profiles.GetAsync() ?? new ProfileInput();
+        _saved = await Profiles.GetAsync() ?? new ProfileInput();
+        _theme = await JS.InvokeAsync<string>("bjjTheme.get");
+    }
+
+    private async Task SaveAsync()
+    {
+        var result = await Profiles.SaveAsync(_p!);
+        _error = result.Error;
+        if (result.IsSuccess)
+        {
+            _saved = (await Profiles.GetAsync())!;
+            Toasts.Show("Perfil guardado");
+        }
+    }
+
+    private async Task SetThemeAsync(string theme)
+    {
+        _theme = theme;
+        await JS.InvokeVoidAsync("bjjTheme.set", theme);
+    }
+
+    private async Task ExportAsync()
+    {
+        var json = await Backup.ExportJsonAsync();
+        await JS.InvokeVoidAsync("bjjFiles.download", $"bjj-journal-{DateTime.Now:yyyy-MM-dd}.json", "application/json", json);
+        Toasts.Show("Copia exportada");
+    }
+
+    private async Task OnFileAsync(InputFileChangeEventArgs e)
+    {
+        using var reader = new StreamReader(e.File.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024));
+        _json = await reader.ReadToEndAsync();
+        var result = await Backup.PreviewAsync(_json);
+        if (!result.IsSuccess)
+        {
+            Toasts.Show(result.Error!);
+            _json = null;
+            return;
+        }
+
+        _preview = result.Value;
+    }
+
+    private async Task ImportAsync(ImportMode mode)
+    {
+        var result = await Backup.ImportAsync(_json!, mode);
+        _preview = null;
+        _json = null;
+        Toasts.Show(result.IsSuccess ? "Datos importados" : result.Error!);
+        if (result.IsSuccess)
+        {
+            Nav.NavigateTo("./");
+        }
+    }
+}

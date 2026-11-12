@@ -1,0 +1,47 @@
+@* Barras verticales en SVG generadas en C#. La última barra (semana actual) se resalta. *@
+<div class="chart">
+    <svg viewBox="0 0 @W @H" role="img" aria-label="@AriaLabel">
+        @for (var g = 0; g <= 2; g++)
+        {
+            var y = Top + (H - Top - Bottom) * g / 2.0;
+            <line class="grid" x1="0" x2="@W" y1="@F(y)" y2="@F(y)" />
+        }
+        @for (var i = 0; i < Values.Count; i++)
+        {
+            var v = Values[i];
+            var h = Max <= 0 ? 0 : (H - Top - Bottom) * v / Max;
+            var x = i * Slot + Slot * 0.18;
+            var y = H - Bottom - h;
+            <rect class="@(i == Values.Count - 1 ? "bar-on" : (v > 0 ? "bar-on" : "bar-dim"))" opacity="@(i == Values.Count - 1 ? "1" : ".55")"
+                  x="@F(x)" y="@F(v > 0 ? y : H - Bottom - 2)" width="@F(Slot * 0.64)" height="@F(v > 0 ? h : 2)" rx="3">
+                <title>@Labels[i]: @ValueLabel(v)</title>
+            </rect>
+            @if (v > 0)
+            {
+                <g><text class="val" x="@F(x + Slot * 0.32)" y="@F(y - 4)" text-anchor="middle">@ValueLabel(v)</text></g>
+            }
+            @if (i % LabelEvery == 0 || i == Values.Count - 1)
+            {
+                <g><text class="tick" x="@F(x + Slot * 0.32)" y="@(H - 4)" text-anchor="middle">@Labels[i]</text></g>
+            }
+        }
+    </svg>
+</div>
+
+@code {
+    private const double W = 360;
+    private const double H = 150;
+    private const double Top = 16;
+    private const double Bottom = 18;
+
+    [Parameter, EditorRequired] public IReadOnlyList<double> Values { get; set; } = [];
+    [Parameter, EditorRequired] public IReadOnlyList<string> Labels { get; set; } = [];
+    [Parameter] public Func<double, string> ValueLabel { get; set; } = v => v.ToString("0.#");
+    [Parameter] public int LabelEvery { get; set; } = 2;
+    [Parameter] public string AriaLabel { get; set; } = "Gráfico de barras";
+
+    private double Slot => Values.Count == 0 ? W : W / Values.Count;
+    private double Max => Values.Count == 0 ? 0 : Values.Max() * 1.1;
+
+    private static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
+}

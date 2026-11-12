@@ -1,0 +1,92 @@
+@page "/tecnicas/{Id:guid}"
+@inject TechniqueService Techniques
+@inject ToastService Toasts
+
+<PageTitle>@(_t?.Name ?? "Técnica") · BJJ Journal</PageTitle>
+
+@if (_t is null)
+{
+    @if (_loaded) { <div class="card empty">Esta técnica no existe. <a href="tecnicas">Ver técnicas</a></div> }
+    return;
+}
+
+<div class="view narrow">
+    <div class="view-head">
+        <div class="back-row">
+            <a class="round-btn" aria-label="Volver" href="tecnicas"><Icon Name="left" /></a>
+            <h1 class="subtitle">@_t.Name</h1>
+        </div>
+        <a class="btn small" href="tecnicas/@_t.Id/editar"><Icon Name="edit" />Editar</a>
+    </div>
+
+    <div class="chips">
+        <span class="chip on"><span class="dot" style="background:@Labels.CategoryColor(_t.Category)"></span>@Labels.Of(_t.Category)</span>
+        @if (_t.PositionName is not null) { <span class="chip">@_t.PositionName</span> }
+        @if (_t.CurriculumBelt is { } belt) { <span class="chip"><span class="belt-chip" style="background:@Labels.BeltColor(belt); width:22px"></span>Temario @Labels.Of(belt).ToLowerInvariant()</span> }
+        @foreach (var tag in _t.Tags) { <span class="tag accent">#@tag</span> }
+    </div>
+
+    <div class="kpi-grid kpi-4">
+        <div class="kpi"><div class="label">Veces trabajada</div><div class="kpi-num">@_t.TimesWorked</div></div>
+        <div class="kpi"><div class="label">Última sesión</div><div class="kpi-num" style="font-size:18px">@(_t.LastWorked is { } l ? Format.Relative(l) : "—")</div></div>
+        <div class="kpi"><div class="label">Sumisiones a favor</div><div class="kpi-num accent">@_t.SubmissionsFor</div></div>
+        <div class="kpi"><div class="label">En contra</div><div class="kpi-num danger-text">@_t.SubmissionsAgainst</div></div>
+    </div>
+
+    <div class="card">
+        <h2>Progreso</h2>
+        <Segmented TValue="ProgressStatus" Value="_t.Progress" ValueChanged="SetProgressAsync" Label="Labels.Of" />
+    </div>
+
+    @if (_t.Description is not null)
+    {
+        <div class="card"><h2>Descripción</h2><p class="notes">@_t.Description</p></div>
+    }
+    @if (_t.Notes is not null)
+    {
+        <div class="card"><h2>Notas</h2><p class="notes">@_t.Notes</p></div>
+    }
+    @if (_t.Links.Count > 0)
+    {
+        <div class="card">
+            <h2>Enlaces</h2>
+            <div class="links">
+                @foreach (var link in _t.Links)
+                {
+                    <a href="@link" target="_blank" rel="noopener noreferrer"><Icon Name="link" /> @link</a>
+                }
+            </div>
+        </div>
+    }
+
+    <div class="card list-card">
+        <h2>Sesiones recientes</h2>
+        @if (_t.RecentSessions.Count == 0)
+        {
+            <div class="empty">Todavía no la has trabajado en ninguna sesión.</div>
+        }
+        <div class="list">
+            @foreach (var s in _t.RecentSessions) { <SessionRow Session="s" /> }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private TechniqueDetail? _t;
+    private bool _loaded;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _t = await Techniques.GetAsync(Id);
+        _loaded = true;
+    }
+
+    private async Task SetProgressAsync(ProgressStatus progress)
+    {
+        await Techniques.SetProgressAsync(Id, progress);
+        _t = await Techniques.GetAsync(Id);
+        Toasts.Show($"Progreso: {Labels.Of(progress)}");
+    }
+}

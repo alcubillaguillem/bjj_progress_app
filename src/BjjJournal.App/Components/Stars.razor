@@ -1,0 +1,6 @@
+@* Satisfacción 1-5 en modo lectura. *@
+<span class="stars-view" title="@Labels.Satisfaction(Value)">@(new string('●', Value))<span>@(new string('●', Math.Max(0, 5 - Value)))</span></span>
+
+@code {
+    [Parameter] public int Value { get; set; }
+}

@@ -1,0 +1,44 @@
+@* Tarta tipo donut con leyenda. *@
+@if (Total == 0)
+{
+    <div class="empty">Sin datos todavía.</div>
+}
+else
+{
+    <div class="donut-wrap">
+        <svg viewBox="0 0 42 42" role="img" aria-label="@AriaLabel">
+            <circle cx="21" cy="21" r="15.915" fill="none" stroke="var(--line)" stroke-width="6" />
+            @{ double offset = 25; }
+            @foreach (var s in Slices.Where(s => s.Value > 0))
+            {
+                var pct = 100.0 * s.Value / Total;
+                <circle cx="21" cy="21" r="15.915" fill="none" stroke="@s.Color" stroke-width="6"
+                        stroke-dasharray="@F(pct) @F(100 - pct)" stroke-dashoffset="@F(offset)"><title>@s.Label: @s.Value</title></circle>
+                offset -= pct;
+            }
+            <text x="21" y="23.5" text-anchor="middle" style="font: 700 8px var(--num); fill: var(--text)">@Total</text>
+        </svg>
+        <div class="legend">
+            @foreach (var s in Slices.Where(s => s.Value > 0))
+            {
+                <div class="legend-row">
+                    <span class="dot" style="background:@s.Color"></span>
+                    <span class="name">@s.Label</span>
+                    <span class="v">@s.Value</span>
+                    <span class="muted small">@((100.0 * s.Value / Total).ToString("0"))%</span>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    public sealed record Slice(string Label, int Value, string Color);
+
+    [Parameter, EditorRequired] public IReadOnlyList<Slice> Slices { get; set; } = [];
+    [Parameter] public string AriaLabel { get; set; } = "Reparto";
+
+    private int Total => Slices.Sum(s => s.Value);
+
+    private static string F(double v) => v.ToString("0.###", CultureInfo.InvariantCulture);
+}

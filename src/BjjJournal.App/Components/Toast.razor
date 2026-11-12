@@ -1,0 +1,33 @@
+@implements IDisposable
+@inject ToastService Toasts
+
+<div class="toast @(_visible ? "show" : "")" role="status" aria-live="polite">@_message</div>
+
+@code {
+    private string _message = "";
+    private bool _visible;
+    private CancellationTokenSource? _cts;
+
+    protected override void OnInitialized() => Toasts.Shown += OnShown;
+
+    private async void OnShown(string message)
+    {
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource();
+        var token = _cts.Token;
+        _message = message;
+        _visible = true;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            await Task.Delay(2200, token);
+            _visible = false;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (TaskCanceledException)
+        {
+        }
+    }
+
+    public void Dispose() => Toasts.Shown -= OnShown;
+}

@@ -1,0 +1,110 @@
+@page "/sesiones/{Id:guid}"
+@inject SessionService SessionsSvc
+@inject NavigationManager Nav
+
+<PageTitle>Sesión · BJJ Journal</PageTitle>
+
+@if (_s is null)
+{
+    @if (_loaded) { <div class="card empty">Esta sesión no existe. <a href="sesiones">Ver sesiones</a></div> }
+    return;
+}
+
+<div class="view narrow">
+    <div class="view-head">
+        <div class="back-row">
+            <a class="round-btn" aria-label="Volver" href="sesiones"><Icon Name="left" /></a>
+            <h1 class="subtitle">@Labels.Of(_s.Type) · @Labels.Of(_s.Attire)</h1>
+        </div>
+        <a class="btn small" href="sesiones/@_s.Id/editar"><Icon Name="edit" />Editar</a>
+    </div>
+
+    <div class="card hero">
+        <div class="label cap">@Format.DayLong(_s.StartedAt)</div>
+        <div class="hero-row">
+            <div class="huge">@_s.DurationMinutes<span>min</span></div>
+            <div style="text-align:right">
+                <div class="label">Satisfacción</div>
+                <div style="font-size:18px"><Stars Value="_s.Satisfaction" /></div>
+                <div class="small muted">@Labels.Satisfaction(_s.Satisfaction)</div>
+            </div>
+        </div>
+        @if (_s.Location is not null) { <div class="stat-line"><span><Icon Name="pin" /> @_s.Location</span></div> }
+    </div>
+
+    @if (_s.Rolls.Count > 0)
+    {
+        <div class="score">
+            <div><div class="label">Sumisiones a favor</div><div class="n accent">@_s.SubmissionsFor</div></div>
+            <div><div class="label">En contra</div><div class="n danger-text">@_s.SubmissionsAgainst</div></div>
+            <div><div class="label">Rolls</div><div class="n">@_s.Rolls.Count</div></div>
+        </div>
+    }
+
+    @if (_s.Notes is not null)
+    {
+        <div class="card"><h2>Notas</h2><p class="notes">@_s.Notes</p></div>
+    }
+
+    <div class="card list-card">
+        <h2>Técnicas (@_s.Techniques.Count)</h2>
+        @if (_s.Techniques.Count == 0)
+        {
+            <div class="empty">No apuntaste técnicas en esta sesión.</div>
+        }
+        <div class="list">
+            @foreach (var t in _s.Techniques)
+            {
+                <a class="item" href="tecnicas/@t.TechniqueId">
+                    <span class="dot" style="background:@Labels.CategoryColor(t.Category)"></span>
+                    <span class="info"><div class="note">@t.Name</div><div class="meta">@Labels.Of(t.Category)</div></span>
+                    <span class="tag">@Labels.Of(t.Focus)</span>
+                </a>
+            }
+        </div>
+    </div>
+
+    @if (_s.Rolls.Count > 0)
+    {
+        <div class="card list-card">
+            <h2>Rolls</h2>
+            <div class="list">
+                @foreach (var (r, i) in _s.Rolls.Select((r, i) => (r, i)))
+                {
+                    <div class="item" style="cursor:default; align-items:flex-start">
+                        <span class="cat-ic"><Icon Name="swords" /></span>
+                        <span class="info">
+                            <div class="note">@(r.PartnerName ?? $"Roll {i + 1}") @if (r.PartnerBelt is { } b) { <span class="tag" style="margin-left:4px">@Labels.Of(b)</span> }</div>
+                            @if (r.Events.Count == 0)
+                            {
+                                <div class="meta">Sin eventos</div>
+                            }
+                            @foreach (var e in r.Events)
+                            {
+                                <div class="small" style="margin-top:4px">
+                                    <span class="@(e.Kind == RollEventKind.SubmissionFor ? "accent" : e.Kind == RollEventKind.SubmissionAgainst ? "danger-text" : "muted")">@Labels.Of(e.Kind)</span>
+                                    @if (e.TechniqueName is not null) { <text> · @e.TechniqueName</text> }
+                                    @if (e.PositionName is not null) { <span class="muted"> · @e.PositionName</span> }
+                                </div>
+                            }
+                        </span>
+                        <span class="amt">@r.DurationMinutes<small>min</small></span>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private SessionDetail? _s;
+    private bool _loaded;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _s = await SessionsSvc.GetAsync(Id);
+        _loaded = true;
+    }
+}

@@ -1,0 +1,93 @@
+@page "/bienvenida"
+@layout BareLayout
+@inject ProfileService Profiles
+@inject NavigationManager Nav
+
+<PageTitle>Bienvenida · BJJ Journal</PageTitle>
+
+<div class="onboard">
+    <img class="logo" src="icon.svg" alt="" />
+    <div class="steps-dots">
+        @for (var i = 1; i <= 3; i++)
+        {
+            <span class="@(i <= _step ? "on" : "")"></span>
+        }
+    </div>
+
+    @switch (_step)
+    {
+        case 1:
+            <h1>Tu diario de BJJ</h1>
+            <p class="muted">Apunta cada sesión, guarda tus técnicas y mira qué parte de tu juego está floja. Todo se guarda en este dispositivo.</p>
+            <label class="field">¿Cómo te llamas?
+                <input @bind="_profile.DisplayName" @bind:event="oninput" placeholder="Tu nombre" autofocus />
+            </label>
+            <label class="field">Gimnasio (opcional)
+                <input @bind="_profile.GymName" placeholder="Nombre del gimnasio" />
+            </label>
+            <button class="btn primary big-btn" disabled="@string.IsNullOrWhiteSpace(_profile.DisplayName)" @onclick="() => _step = 2">Siguiente</button>
+            break;
+
+        case 2:
+            <h1>Tu cinturón</h1>
+            <div class="belt-grid">
+                @foreach (var belt in Enum.GetValues<Belt>())
+                {
+                    var b = belt;
+                    <button type="button" class="belt-opt @(_profile.Belt == b ? "on" : "")" style="background:@Labels.BeltColor(b); color:@(b is Belt.White ? "#111" : "#fff")"
+                            @onclick="() => _profile.Belt = b">@Labels.Of(b)</button>
+                }
+            </div>
+            <div class="field">Grados
+                <Segmented TValue="StripeOption" Value="(StripeOption)_profile.Stripes" ValueChanged="v => _profile.Stripes = (int)v" Label="v => ((int)v).ToString()" />
+            </div>
+            <div class="form-actions">
+                <button class="btn" @onclick="() => _step = 1">Atrás</button>
+                <button class="btn primary" @onclick="() => _step = 3">Siguiente</button>
+            </div>
+            break;
+
+        default:
+            <h1>¿Cargamos técnicas básicas?</h1>
+            <p class="muted">Incluye unas 40 posiciones y 60 técnicas con el temario de blanco y azul. Puedes editarlas o borrarlas cuando quieras.</p>
+            <div class="segmented">
+                <button type="button" class="@(_seed ? "on" : "")" @onclick="() => _seed = true">Sí, cargar</button>
+                <button type="button" class="@(!_seed ? "on" : "")" @onclick="() => _seed = false">Empezar vacío</button>
+            </div>
+            @if (_error is not null) { <div class="error">@_error</div> }
+            <div class="form-actions">
+                <button class="btn" @onclick="() => _step = 2">Atrás</button>
+                <button class="btn primary" @onclick="FinishAsync">Empezar</button>
+            </div>
+            break;
+    }
+</div>
+
+@code {
+    private enum StripeOption { Zero, One, Two, Three, Four }
+
+    private readonly ProfileInput _profile = new();
+    private int _step = 1;
+    private bool _seed = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (await Profiles.IsOnboardedAsync())
+        {
+            Nav.NavigateTo("./", replace: true);
+        }
+    }
+
+    private async Task FinishAsync()
+    {
+        var result = await Profiles.CompleteOnboardingAsync(_profile, _seed);
+        if (!result.IsSuccess)
+        {
+            _error = result.Error;
+            return;
+        }
+
+        Nav.NavigateTo("./", replace: true);
+    }
+}

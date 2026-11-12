@@ -1,0 +1,229 @@
+@page "/sesiones/nueva"
+@page "/sesiones/{Id:guid}/editar"
+@inject SessionService SessionsSvc
+@inject TechniqueService Techniques
+@inject PositionService Positions
+@inject NavigationManager Nav
+@inject ToastService Toasts
+
+<PageTitle>@(Id is null ? "Nueva sesión" : "Editar sesión") · BJJ Journal</PageTitle>
+
+@if (_input is null)
+{
+    return;
+}
+
+<div class="view narrow">
+    <div class="back-row">
+        <button class="round-btn" aria-label="Volver" @onclick="Back"><Icon Name="left" /></button>
+        <h1 class="subtitle">@(Id is null ? "Nueva sesión" : "Editar sesión")</h1>
+    </div>
+
+    <div class="card form">
+        <div class="field-row">
+            <label class="field">Fecha y hora<input type="datetime-local" @bind="_local" /></label>
+            <div class="field">Duración (min)
+                <div class="stepper">
+                    <button type="button" class="round-btn" aria-label="Menos" @onclick="() => _input.DurationMinutes = Math.Max(5, _input.DurationMinutes - 15)">–</button>
+                    <input type="number" inputmode="numeric" min="1" @bind="_input.DurationMinutes" />
+                    <button type="button" class="round-btn" aria-label="Más" @onclick="() => _input.DurationMinutes += 15">+</button>
+                </div>
+            </div>
+        </div>
+        <div class="field">Tipo
+            <div class="chips">
+                @foreach (var t in Enum.GetValues<SessionType>())
+                {
+                    var type = t;
+                    <button type="button" class="chip @(_input.Type == type ? "on" : "")" @onclick="() => _input.Type = type">@Labels.Of(type)</button>
+                }
+            </div>
+        </div>
+        <div class="field">Gi / No-gi
+            <Segmented TValue="Attire" @bind-Value="_input.Attire" Label="Labels.Of" />
+        </div>
+        <button type="button" class="btn primary big-btn" @onclick="SaveAsync"><Icon Name="check" />Guardar sesión</button>
+        <div class="small muted">Con esto basta. Lo de abajo es opcional.</div>
+    </div>
+
+    <div class="card form">
+        <h2>Cómo fue</h2>
+        <SatisfactionPicker @bind-Value="_input.Satisfaction" />
+        <label class="field">Lugar<input @bind="_input.Location" placeholder="Gimnasio, open mat…" /></label>
+        <label class="field">Notas<textarea @bind="_input.Notes" placeholder="Qué aprendiste, qué falló, detalles que no quieres olvidar…"></textarea></label>
+    </div>
+
+    <div class="card form">
+        <div class="card-head"><h2>Técnicas trabajadas</h2><span class="small muted">@_input.Techniques.Count</span></div>
+        @if (_input.Techniques.Count > 0)
+        {
+            <div class="picked">
+                @foreach (var st in _input.Techniques)
+                {
+                    var item = st;
+                    <div class="picked-row">
+                        <span class="dot" style="background:@Color(item.TechniqueId)"></span>
+                        <span class="name">@Name(item.TechniqueId)</span>
+                        <select @bind="item.Focus" aria-label="Foco">
+                            @foreach (var f in Enum.GetValues<TechniqueFocus>()) { <option value="@f">@Labels.Of(f)</option> }
+                        </select>
+                        <button type="button" class="icon-btn" aria-label="Quitar" @onclick="() => _input.Techniques.Remove(item)"><Icon Name="x" /></button>
+                    </div>
+                }
+            </div>
+        }
+        <TechniquePicker Exclude="@(_input.Techniques.Select(t => t.TechniqueId).ToList())" OnPick="AddTechnique" OnCreated="LoadTechniquesAsync" />
+    </div>
+
+    <div class="card form">
+        <div class="card-head"><h2>Rolls</h2><span class="small muted">@SubsFor a favor · @SubsAgainst en contra</span></div>
+        @for (var r = 0; r < _input.Rolls.Count; r++)
+        {
+            var roll = _input.Rolls[r];
+            var n = r + 1;
+            <div class="sub-card">
+                <div class="roll-head">
+                    <strong>Roll @n</strong>
+                    <button type="button" class="icon-btn" aria-label="Quitar roll" @onclick="() => _input.Rolls.Remove(roll)"><Icon Name="trash" /></button>
+                </div>
+                <div class="field-row">
+                    <label class="field">Compañero<input @bind="roll.PartnerName" placeholder="Nombre" /></label>
+                    <label class="field">Cinturón
+                        <select @bind="roll.PartnerBelt">
+                            <option value="">—</option>
+                            @foreach (var b in Enum.GetValues<Belt>()) { <option value="@b">@Labels.Of(b)</option> }
+                        </select>
+                    </label>
+                    <label class="field">Minutos<input type="number" inputmode="numeric" min="1" @bind="roll.DurationMinutes" /></label>
+                </div>
+                @foreach (var ev in roll.Events)
+                {
+                    var e = ev;
+                    <div class="event-row">
+                        <select class="ev-kind" @bind="e.Kind" aria-label="Evento">
+                            @foreach (var k in Enum.GetValues<RollEventKind>()) { <option value="@k">@Labels.Of(k)</option> }
+                        </select>
+                        <button type="button" class="icon-btn ev-del" aria-label="Quitar evento" @onclick="() => roll.Events.Remove(e)"><Icon Name="x" /></button>
+                        <select class="ev-tech" @bind="e.TechniqueId" aria-label="Técnica">
+                            <option value="">Técnica…</option>
+                            @foreach (var t in _techniques) { <option value="@t.Id">@t.Name</option> }
+                        </select>
+                        <select class="ev-pos" @bind="e.PositionId" aria-label="Posición">
+                            <option value="">Posición…</option>
+                            @foreach (var p in _positions) { <option value="@p.Id">@p.Name</option> }
+                        </select>
+                    </div>
+                }
+                <div class="chips">
+                    <button type="button" class="chip" @onclick="() => roll.Events.Add(new RollEventInput { Kind = RollEventKind.SubmissionFor })"><Icon Name="plus" />Sumisión a favor</button>
+                    <button type="button" class="chip" @onclick="() => roll.Events.Add(new RollEventInput { Kind = RollEventKind.SubmissionAgainst })"><Icon Name="plus" />En contra</button>
+                    <button type="button" class="chip" @onclick="() => roll.Events.Add(new RollEventInput { Kind = RollEventKind.SweepFor })"><Icon Name="plus" />Otro evento</button>
+                </div>
+            </div>
+        }
+        <button type="button" class="btn" @onclick="AddRoll"><Icon Name="plus" />Añadir roll</button>
+    </div>
+
+    @if (_error is not null) { <div class="error">@_error</div> }
+    <div class="form-actions">
+        @if (Id is not null)
+        {
+            <button type="button" class="btn danger" @onclick="DeleteAsync"><Icon Name="trash" />Borrar</button>
+        }
+        <button type="button" class="btn primary big-btn" @onclick="SaveAsync"><Icon Name="check" />Guardar sesión</button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    private SessionInput? _input;
+    private DateTime _local;
+    private IReadOnlyList<TechniqueListItem> _techniques = [];
+    private IReadOnlyList<PositionDto> _positions = [];
+    private string? _error;
+    private bool _confirmDelete;
+
+    private int SubsFor => _input?.Rolls.SelectMany(r => r.Events).Count(e => e.Kind == RollEventKind.SubmissionFor) ?? 0;
+    private int SubsAgainst => _input?.Rolls.SelectMany(r => r.Events).Count(e => e.Kind == RollEventKind.SubmissionAgainst) ?? 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _input = Id is { } id ? await SessionsSvc.GetInputAsync(id) : await SessionsSvc.GetDefaultsAsync();
+        if (_input is null)
+        {
+            Nav.NavigateTo("sesiones", replace: true);
+            return;
+        }
+
+        _local = _input.StartedAt.ToLocalTime().DateTime;
+        _positions = await Positions.ListAsync();
+        await LoadTechniquesAsync();
+    }
+
+    private async Task LoadTechniquesAsync() => _techniques = await Techniques.SearchAsync(new TechniqueFilter());
+
+    private string Name(Guid id) => _techniques.FirstOrDefault(t => t.Id == id)?.Name ?? "Técnica borrada";
+
+    private string Color(Guid id) =>
+        _techniques.FirstOrDefault(t => t.Id == id) is { } t ? Labels.CategoryColor(t.Category) : "var(--muted)";
+
+    private void AddTechnique(Guid id)
+    {
+        if (_input!.Techniques.All(t => t.TechniqueId != id))
+        {
+            _input.Techniques.Add(new SessionTechniqueInput { TechniqueId = id, Focus = TechniqueFocus.Drilled });
+        }
+    }
+
+    private void AddRoll()
+    {
+        var lastMinutes = _input!.Rolls.LastOrDefault()?.DurationMinutes ?? 6;
+        _input.Rolls.Add(new RollInput { DurationMinutes = lastMinutes });
+    }
+
+    private async Task SaveAsync()
+    {
+        _input!.StartedAt = new DateTimeOffset(_local, TimeZoneInfo.Local.GetUtcOffset(_local));
+        if (Id is { } id)
+        {
+            var result = await SessionsSvc.UpdateAsync(id, _input);
+            if (!result.IsSuccess)
+            {
+                _error = result.Error;
+                return;
+            }
+
+            Toasts.Show("Sesión actualizada");
+            Nav.NavigateTo($"sesiones/{id}", replace: true);
+        }
+        else
+        {
+            var result = await SessionsSvc.CreateAsync(_input);
+            if (!result.IsSuccess)
+            {
+                _error = result.Error;
+                return;
+            }
+
+            Toasts.Show("Sesión guardada");
+            Nav.NavigateTo($"sesiones/{result.Value}", replace: true);
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (!_confirmDelete)
+        {
+            _confirmDelete = true;
+            _error = "Pulsa «Borrar» otra vez para confirmar.";
+            return;
+        }
+
+        await SessionsSvc.DeleteAsync(Id!.Value);
+        Toasts.Show("Sesión borrada");
+        Nav.NavigateTo("sesiones", replace: true);
+    }
+
+    private void Back() => Nav.NavigateTo(Id is { } id ? $"sesiones/{id}" : "./");
+}

@@ -1,0 +1,37 @@
+# Publica la app en GitHub Pages en cada push a main (igual que Control Finanzas).
+name: Deploy a GitHub Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet test
+      - run: dotnet publish src/BjjJournal.App -c Release -o out
+      - name: Ajustar base href y fallback de rutas
+        run: |
+          sed -i 's#<base href="/" />#<base href="/${{ github.event.repository.name }}/" />#' out/wwwroot/index.html
+          cp out/wwwroot/index.html out/wwwroot/404.html
+          touch out/wwwroot/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: out/wwwroot
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

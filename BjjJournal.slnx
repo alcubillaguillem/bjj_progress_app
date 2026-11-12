@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/BjjJournal.App/BjjJournal.App.csproj" />
+    <Project Path="src/BjjJournal.Application/BjjJournal.Application.csproj" />
+    <Project Path="src/BjjJournal.Domain/BjjJournal.Domain.csproj" />
+    <Project Path="src/BjjJournal.Infrastructure/BjjJournal.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/BjjJournal.Application.Tests/BjjJournal.Application.Tests.csproj" />
+    <Project Path="tests/BjjJournal.Domain.Tests/BjjJournal.Domain.Tests.csproj" />
+  </Folder>
+</Solution>

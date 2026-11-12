@@ -1,0 +1,160 @@
+@page "/tecnicas/nueva"
+@page "/tecnicas/{Id:guid}/editar"
+@inject TechniqueService Techniques
+@inject PositionService Positions
+@inject NavigationManager Nav
+@inject ToastService Toasts
+
+<PageTitle>@(Id is null ? "Nueva técnica" : "Editar técnica") · BJJ Journal</PageTitle>
+
+@if (_input is null)
+{
+    return;
+}
+
+<div class="view narrow">
+    <div class="back-row">
+        <button class="round-btn" aria-label="Volver" @onclick="Back"><Icon Name="left" /></button>
+        <h1 class="subtitle">@(Id is null ? "Nueva técnica" : "Editar técnica")</h1>
+    </div>
+
+    <div class="card form">
+        <label class="field">Nombre *<input @bind="_input.Name" placeholder="Ej.: Kimura desde media guardia" /></label>
+        <div class="field">Categoría *
+            <div class="chips">
+                @foreach (var c in Enum.GetValues<TechniqueCategory>())
+                {
+                    var cat = c;
+                    <button type="button" class="chip @(_input.Category == cat ? "on" : "")" @onclick="() => _input.Category = cat"><span class="dot" style="background:@Labels.CategoryColor(cat)"></span>@Labels.Of(cat)</button>
+                }
+            </div>
+        </div>
+        <div class="field-row">
+            <label class="field">Posición de partida
+                <select @bind="_input.PositionId">
+                    <option value="">Sin posición</option>
+                    @foreach (var p in _positions) { <option value="@p.Id">@p.Name</option> }
+                </select>
+            </label>
+            <label class="field">O crea una posición
+                <div style="display:flex; gap:6px">
+                    <input @bind="_newPosition" placeholder="Nueva posición" />
+                    <button type="button" class="btn small" disabled="@string.IsNullOrWhiteSpace(_newPosition)" @onclick="CreatePositionAsync">Añadir</button>
+                </div>
+            </label>
+        </div>
+        <div class="field-row">
+            <label class="field">Temario de cinturón
+                <select @bind="_input.CurriculumBelt">
+                    <option value="">Ninguno</option>
+                    @foreach (var b in Enum.GetValues<Belt>()) { <option value="@b">@Labels.Of(b)</option> }
+                </select>
+            </label>
+            <label class="field">Progreso
+                <select @bind="_input.Progress">
+                    @foreach (var p in Enum.GetValues<ProgressStatus>()) { <option value="@p">@Labels.Of(p)</option> }
+                </select>
+            </label>
+        </div>
+        <label class="field">Etiquetas (separadas por comas)<input @bind="Tags" placeholder="gi, presión, favorita" /></label>
+        <label class="field">Descripción<textarea @bind="_input.Description" placeholder="Pasos clave"></textarea></label>
+        <label class="field">Notas<textarea @bind="_input.Notes" placeholder="Detalles, errores típicos…"></textarea></label>
+        <label class="field">Enlaces a vídeos (uno por línea)<textarea @bind="Links" placeholder="https://…"></textarea></label>
+    </div>
+
+    @if (_error is not null) { <div class="error">@_error</div> }
+    <div class="form-actions">
+        @if (Id is not null)
+        {
+            <button type="button" class="btn danger" @onclick="DeleteAsync"><Icon Name="trash" />Borrar</button>
+        }
+        <button type="button" class="btn primary big-btn" @onclick="SaveAsync"><Icon Name="check" />Guardar técnica</button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    private TechniqueInput? _input;
+    private IReadOnlyList<PositionDto> _positions = [];
+    private string? _newPosition;
+    private string? _error;
+    private bool _confirmDelete;
+
+    private string Tags
+    {
+        get => string.Join(", ", _input!.Tags);
+        set => _input!.Tags = (value ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList();
+    }
+
+    private string Links
+    {
+        get => string.Join("\n", _input!.Links);
+        set => _input!.Links = (value ?? "").Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _positions = await Positions.ListAsync();
+        _input = Id is { } id ? await Techniques.GetInputAsync(id) : new TechniqueInput();
+        if (_input is null)
+        {
+            Nav.NavigateTo("tecnicas", replace: true);
+        }
+    }
+
+    private async Task CreatePositionAsync()
+    {
+        var result = await Positions.CreateAsync(_newPosition!, PositionRole.Neutral);
+        if (result.IsSuccess)
+        {
+            _positions = await Positions.ListAsync();
+            _input!.PositionId = result.Value!.Id;
+            _newPosition = null;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (Id is { } id)
+        {
+            var result = await Techniques.UpdateAsync(id, _input!);
+            if (!result.IsSuccess)
+            {
+                _error = result.Error;
+                return;
+            }
+
+            Toasts.Show("Técnica actualizada");
+            Nav.NavigateTo($"tecnicas/{id}", replace: true);
+        }
+        else
+        {
+            var result = await Techniques.CreateAsync(_input!);
+            if (!result.IsSuccess)
+            {
+                _error = result.Error;
+                return;
+            }
+
+            Toasts.Show("Técnica creada");
+            Nav.NavigateTo($"tecnicas/{result.Value}", replace: true);
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (!_confirmDelete)
+        {
+            _confirmDelete = true;
+            _error = "Pulsa «Borrar» otra vez para confirmar. Las sesiones donde aparece se conservan.";
+            return;
+        }
+
+        await Techniques.DeleteAsync(Id!.Value);
+        Toasts.Show("Técnica borrada");
+        Nav.NavigateTo("tecnicas", replace: true);
+    }
+
+    private void Back() => Nav.NavigateTo(Id is { } id ? $"tecnicas/{id}" : "tecnicas");
+}

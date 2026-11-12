@@ -1,0 +1,53 @@
+@inherits LayoutComponentBase
+@inject ProfileService Profiles
+@inject NavigationManager Nav
+
+@if (!_ready)
+{
+    <div class="boot"><img src="icon.svg" alt="Cargando" /></div>
+}
+else
+{
+    <div class="shell">
+        <aside class="sidebar">
+            <a class="brand" href="./"><img src="icon.svg" width="32" height="32" alt="" />BJJ Journal</a>
+            <a class="btn primary add-side" href="sesiones/nueva"><Icon Name="plus" />Nueva sesión</a>
+            <nav class="side-nav" aria-label="Secciones">
+                <NavLink class="nav-btn" href="" Match="NavLinkMatch.All" ActiveClass="active"><Icon Name="home" />Inicio</NavLink>
+                <NavLink class="nav-btn" href="sesiones" ActiveClass="active"><Icon Name="calendar" />Sesiones</NavLink>
+                <NavLink class="nav-btn" href="tecnicas" ActiveClass="active"><Icon Name="book" />Técnicas</NavLink>
+                <NavLink class="nav-btn" href="cinturon" ActiveClass="active"><Icon Name="belt" />Cinturón</NavLink>
+                <NavLink class="nav-btn" href="perfil" ActiveClass="active"><Icon Name="user" />Perfil</NavLink>
+            </nav>
+            <div class="side-foot">Datos guardados solo en este dispositivo.</div>
+        </aside>
+
+        <main class="content">
+            @Body
+        </main>
+
+        <nav class="tabbar" aria-label="Secciones">
+            <NavLink class="tab-btn" href="" Match="NavLinkMatch.All" ActiveClass="active"><Icon Name="home" /><span>Inicio</span></NavLink>
+            <NavLink class="tab-btn" href="sesiones" Match="NavLinkMatch.All" ActiveClass="active"><Icon Name="calendar" /><span>Sesiones</span></NavLink>
+            <a class="tab-add" href="sesiones/nueva" aria-label="Nueva sesión"><Icon Name="plus" /></a>
+            <NavLink class="tab-btn" href="tecnicas" ActiveClass="active"><Icon Name="book" /><span>Técnicas</span></NavLink>
+            <NavLink class="tab-btn" href="perfil" ActiveClass="active"><Icon Name="user" /><span>Perfil</span></NavLink>
+        </nav>
+    </div>
+}
+<Toast />
+
+@code {
+    private bool _ready;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!await Profiles.IsOnboardedAsync())
+        {
+            Nav.NavigateTo("bienvenida", replace: true);
+            return;
+        }
+
+        _ready = true;
+    }
+}

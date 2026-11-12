@@ -1,0 +1,93 @@
+@page "/sesiones"
+@inject SessionService SessionsSvc
+
+<PageTitle>Sesiones · BJJ Journal</PageTitle>
+
+<div class="view">
+    <div class="view-head">
+        <h1 class="title">Sesiones</h1>
+        <div class="actions">
+            <button class="btn pill @(_showFilters ? "on" : "")" @onclick="() => _showFilters = !_showFilters"><Icon Name="search" />Filtros@(ActiveFilters > 0 ? $" ({ActiveFilters})" : "")</button>
+            <a class="btn primary pill" style="background:var(--accent)" href="sesiones/nueva"><Icon Name="plus" />Nueva</a>
+        </div>
+    </div>
+
+    @if (_showFilters)
+    {
+        <div class="card filters">
+            <div class="filter-row">
+                <label class="field">Desde<input type="date" @bind="_from" @bind:after="LoadAsync" /></label>
+                <label class="field">Hasta<input type="date" @bind="_to" @bind:after="LoadAsync" /></label>
+                <label class="field">Tipo
+                    <select @bind="_type" @bind:after="LoadAsync">
+                        <option value="">Todos</option>
+                        @foreach (var t in Enum.GetValues<SessionType>()) { <option value="@t">@Labels.Of(t)</option> }
+                    </select>
+                </label>
+                <label class="field">Gi / No-gi
+                    <select @bind="_attire" @bind:after="LoadAsync">
+                        <option value="">Ambos</option>
+                        @foreach (var a in Enum.GetValues<Attire>()) { <option value="@a">@Labels.Of(a)</option> }
+                    </select>
+                </label>
+                <label class="field">Satisfacción mínima
+                    <select @bind="_minSat" @bind:after="LoadAsync">
+                        <option value="">Cualquiera</option>
+                        @for (var i = 2; i <= 5; i++) { <option value="@i">@i o más</option> }
+                    </select>
+                </label>
+            </div>
+            @if (ActiveFilters > 0)
+            {
+                <button class="btn ghost small" @onclick="ClearAsync"><Icon Name="x" />Quitar filtros</button>
+            }
+        </div>
+    }
+
+    @if (_items is not null)
+    {
+        <div class="small muted">@_items.Count @(_items.Count == 1 ? "sesión" : "sesiones") · @Format.Hours(_items.Sum(s => s.DurationMinutes) / 60.0) h</div>
+        <div class="card list-card">
+            @if (_items.Count == 0)
+            {
+                <div class="empty">@(ActiveFilters > 0 ? "Ninguna sesión cumple los filtros." : "Aún no hay sesiones.")</div>
+            }
+            else
+            {
+                <div class="list">
+                    @foreach (var month in _items.GroupBy(s => Format.Local(s.StartedAt).ToString("MMMM yyyy")))
+                    {
+                        <div class="day"><span>@month.Key</span><span>@month.Count() · @Format.Hours(month.Sum(s => s.DurationMinutes) / 60.0) h</span></div>
+                        @foreach (var s in month)
+                        {
+                            <SessionRow Session="s" />
+                        }
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<SessionListItem>? _items;
+    private bool _showFilters;
+    private DateOnly? _from;
+    private DateOnly? _to;
+    private SessionType? _type;
+    private Attire? _attire;
+    private int? _minSat;
+
+    private int ActiveFilters => new object?[] { _from, _to, _type, _attire, _minSat }.Count(x => x is not null);
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync() =>
+        _items = await SessionsSvc.ListAsync(new SessionFilter(_from, _to, _type, _attire, _minSat));
+
+    private Task ClearAsync()
+    {
+        (_from, _to, _type, _attire, _minSat) = (null, null, null, null, null);
+        return LoadAsync();
+    }
+}

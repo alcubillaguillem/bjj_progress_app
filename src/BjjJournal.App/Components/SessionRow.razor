@@ -1,0 +1,16 @@
+<a class="item" href="sesiones/@Session.Id">
+    <span class="cat-ic"><Icon Name="@(Session.Type == SessionType.Competition ? "target" : "calendar")" /></span>
+    <span class="info">
+        <div class="note">@Labels.Of(Session.Type) · @Labels.Of(Session.Attire)</div>
+        <div class="meta">
+            @Format.Day(Session.StartedAt)@(Session.Location is null ? "" : $" · {Session.Location}")
+            @if (Session.RollCount > 0) { <text> · @Session.RollCount rolls</text> }
+            @if (Session.SubmissionsFor + Session.SubmissionsAgainst > 0) { <text> · @Session.SubmissionsFor–@Session.SubmissionsAgainst</text> }
+        </div>
+    </span>
+    <span class="amt">@Format.Minutes(Session.DurationMinutes)<small><Stars Value="Session.Satisfaction" /></small></span>
+</a>
+
+@code {
+    [Parameter, EditorRequired] public SessionListItem Session { get; set; } = default!;
+}

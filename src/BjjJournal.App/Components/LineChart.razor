@@ -1,0 +1,76 @@
+@* Línea con huecos donde no hay datos (null). Escala fija 1-5 para la satisfacción. *@
+<div class="chart">
+    <svg viewBox="0 0 @W @H" role="img" aria-label="@AriaLabel">
+        @for (var g = (int)Min; g <= (int)Max; g++)
+        {
+            var y = Y(g);
+            <line class="grid" x1="22" x2="@W" y1="@F(y)" y2="@F(y)" />
+            <g><text class="tick" x="0" y="@F(y + 3)">@g</text></g>
+        }
+        @foreach (var segment in Segments())
+        {
+            @if (segment.Count > 1)
+            {
+                <path class="area" d="@AreaPath(segment)" />
+                <path class="line" d="@LinePath(segment)" />
+            }
+            @foreach (var (i, v) in segment)
+            {
+                <circle class="pt" cx="@F(X(i))" cy="@F(Y(v))" r="3.5"><title>@Labels[i]: @v.ToString("0.0")</title></circle>
+            }
+        }
+        @for (var i = 0; i < Values.Count; i++)
+        {
+            @if (i % 2 == 0 || i == Values.Count - 1)
+            {
+                <g><text class="tick" x="@F(X(i))" y="@(H - 4)" text-anchor="middle">@Labels[i]</text></g>
+            }
+        }
+    </svg>
+</div>
+
+@code {
+    private const double W = 360;
+    private const double H = 150;
+    private const double Top = 10;
+    private const double Bottom = 20;
+
+    [Parameter, EditorRequired] public IReadOnlyList<double?> Values { get; set; } = [];
+    [Parameter, EditorRequired] public IReadOnlyList<string> Labels { get; set; } = [];
+    [Parameter] public double Min { get; set; } = 1;
+    [Parameter] public double Max { get; set; } = 5;
+    [Parameter] public string AriaLabel { get; set; } = "Gráfico de línea";
+
+    private double X(int i) => Values.Count <= 1 ? W / 2 : 34 + (W - 44) * i / (Values.Count - 1);
+    private double Y(double v) => Top + (H - Top - Bottom) * (1 - (v - Min) / (Max - Min));
+
+    private IEnumerable<List<(int I, double V)>> Segments()
+    {
+        var current = new List<(int, double)>();
+        for (var i = 0; i < Values.Count; i++)
+        {
+            if (Values[i] is { } v)
+            {
+                current.Add((i, v));
+            }
+            else if (current.Count > 0)
+            {
+                yield return current;
+                current = [];
+            }
+        }
+
+        if (current.Count > 0)
+        {
+            yield return current;
+        }
+    }
+
+    private string LinePath(List<(int I, double V)> s) =>
+        string.Join(" ", s.Select((p, k) => $"{(k == 0 ? "M" : "L")}{F(X(p.I))} {F(Y(p.V))}"));
+
+    private string AreaPath(List<(int I, double V)> s) =>
+        $"{LinePath(s)} L{F(X(s[^1].I))} {F(H - Bottom)} L{F(X(s[0].I))} {F(H - Bottom)} Z";
+
+    private static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
+}

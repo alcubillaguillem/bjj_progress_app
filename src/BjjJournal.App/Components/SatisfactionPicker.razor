@@ -1,0 +1,14 @@
+<div class="stars" role="radiogroup" aria-label="Satisfacción">
+    @for (var i = 1; i <= 5; i++)
+    {
+        var n = i;
+        <button type="button" role="radio" aria-checked="@(Value == n)" class="@(Value == n ? "on" : "")" title="@Labels.Satisfaction(n)"
+                @onclick="() => ValueChanged.InvokeAsync(n)">@n</button>
+    }
+</div>
+<div class="small muted">@Labels.Satisfaction(Value)</div>
+
+@code {
+    [Parameter] public int Value { get; set; }
+    [Parameter] public EventCallback<int> ValueChanged { get; set; }
+}

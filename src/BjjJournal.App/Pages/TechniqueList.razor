@@ -1,0 +1,97 @@
+@page "/tecnicas"
+@inject TechniqueService Techniques
+@inject PositionService Positions
+
+<PageTitle>Técnicas · BJJ Journal</PageTitle>
+
+<div class="view">
+    <div class="view-head">
+        <h1 class="title">Técnicas</h1>
+        <div class="actions">
+            <a class="btn pill" href="cinturon"><Icon Name="belt" />Cinturón</a>
+            <a class="btn primary pill" style="background:var(--accent)" href="tecnicas/nueva"><Icon Name="plus" />Nueva</a>
+        </div>
+    </div>
+
+    <div class="filters">
+        <div class="search-box">
+            <Icon Name="search" />
+            <input type="search" placeholder="Nombre, posición, etiqueta o notas…" @bind="_query" @bind:event="oninput" @bind:after="LoadAsync" />
+        </div>
+        <div class="chips scroll">
+            <button class="chip @(_category is null ? "on" : "")" @onclick="() => SetCategory(null)">Todas</button>
+            @foreach (var c in Enum.GetValues<TechniqueCategory>())
+            {
+                var cat = c;
+                <button class="chip @(_category == cat ? "on" : "")" @onclick="() => SetCategory(cat)"><span class="dot" style="background:@Labels.CategoryColor(cat)"></span>@Labels.Of(cat)</button>
+            }
+        </div>
+        <div class="filter-row">
+            <select @bind="_positionId" @bind:after="LoadAsync" aria-label="Posición">
+                <option value="">Todas las posiciones</option>
+                @foreach (var p in _positions) { <option value="@p.Id">@p.Name</option> }
+            </select>
+            <select @bind="_tag" @bind:after="LoadAsync" aria-label="Etiqueta">
+                <option value="">Todas las etiquetas</option>
+                @foreach (var t in _tags) { <option value="@t">#@t</option> }
+            </select>
+        </div>
+    </div>
+
+    @if (_items is not null)
+    {
+        <div class="small muted">@_items.Count @(_items.Count == 1 ? "técnica" : "técnicas")</div>
+        <div class="card list-card">
+            @if (_items.Count == 0)
+            {
+                <div class="empty">No hay técnicas que coincidan. <a href="tecnicas/nueva">Crear una</a></div>
+            }
+            <div class="list cols">
+                @foreach (var t in _items)
+                {
+                    <a class="item" href="tecnicas/@t.Id">
+                        <span class="cat-ic" style="color:@Labels.CategoryColor(t.Category)"><span class="dot" style="background:currentColor; width:12px; height:12px"></span></span>
+                        <span class="info">
+                            <div class="note">@t.Name</div>
+                            <div class="meta">@Labels.Of(t.Category)@(t.PositionName is null ? "" : $" · {t.PositionName}")@foreach (var tag in t.Tags.Take(3)) { <text> #@tag</text> }</div>
+                        </span>
+                        <span class="amt">@t.TimesWorked<small>@(t.LastWorked is { } l ? Format.Relative(l) : "sin usar")</small></span>
+                    </a>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "cat")] public string? Cat { get; set; }
+
+    private IReadOnlyList<TechniqueListItem>? _items;
+    private IReadOnlyList<PositionDto> _positions = [];
+    private IReadOnlyList<string> _tags = [];
+    private string _query = "";
+    private TechniqueCategory? _category;
+    private Guid? _positionId;
+    private string? _tag;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Enum.TryParse<TechniqueCategory>(Cat, out var c))
+        {
+            _category = c;
+        }
+
+        _positions = await Positions.ListAsync();
+        _tags = await Techniques.ListTagsAsync();
+        await LoadAsync();
+    }
+
+    private Task SetCategory(TechniqueCategory? category)
+    {
+        _category = category;
+        return LoadAsync();
+    }
+
+    private async Task LoadAsync() =>
+        _items = await Techniques.SearchAsync(new TechniqueFilter(_query, _category, _positionId, string.IsNullOrEmpty(_tag) ? null : _tag));
+}

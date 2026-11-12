@@ -1,0 +1,17 @@
+@typeparam TValue where TValue : struct, Enum
+@* Selector segmentado para enums cortos (Gi / No-gi, tipo de sesión...). *@
+<div class="segmented" role="radiogroup">
+    @foreach (var option in Options ?? Enum.GetValues<TValue>())
+    {
+        var o = option;
+        <button type="button" role="radio" aria-checked="@(o.Equals(Value))" class="@(o.Equals(Value) ? "on" : "")"
+                @onclick="() => ValueChanged.InvokeAsync(o)">@Label(o)</button>
+    }
+</div>
+
+@code {
+    [Parameter] public TValue Value { get; set; }
+    [Parameter] public EventCallback<TValue> ValueChanged { get; set; }
+    [Parameter, EditorRequired] public Func<TValue, string> Label { get; set; } = v => v.ToString();
+    [Parameter] public IEnumerable<TValue>? Options { get; set; }
+}

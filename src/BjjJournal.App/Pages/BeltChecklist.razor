@@ -1,0 +1,108 @@
+@page "/cinturon"
+@inject TechniqueService Techniques
+@inject ProfileService Profiles
+
+<PageTitle>Cinturón · BJJ Journal</PageTitle>
+
+<div class="view">
+    <div class="view-head">
+        <div>
+            <div class="label">Checklist por cinturón</div>
+            <h1 class="title">Cinturón</h1>
+        </div>
+        <a class="btn pill" href="tecnicas/nueva"><Icon Name="plus" />Técnica</a>
+    </div>
+
+    @if (_progress.Count == 0)
+    {
+        <div class="card empty">Ninguna técnica tiene temario de cinturón. Edita una técnica y elige «Temario de cinturón».</div>
+    }
+    else
+    {
+        <div class="grid-3">
+            @foreach (var p in _progress)
+            {
+                var belt = p.Belt;
+                <button class="card" style="text-align:left; cursor:pointer; @(_belt == belt ? "border-color:var(--accent)" : "")" @onclick="() => SelectAsync(belt)">
+                    <div class="card-head" style="margin-bottom:10px">
+                        <h2 style="display:flex; align-items:center; gap:10px"><span class="belt-chip @(belt == Belt.Black ? "black" : "")" style="background:@Labels.BeltColor(belt)"></span>@Labels.Of(belt)</h2>
+                        <span class="kpi-num" style="margin:0; font-size:22px">@p.Percent.ToString("0")%</span>
+                    </div>
+                    <div class="bar"><div class="fill" style="width:@p.Percent.ToString("0.#", CultureInfo.InvariantCulture)%"></div></div>
+                    <div class="small muted" style="margin-top:8px">@p.CompetentOrMastered de @p.Total competentes o dominadas</div>
+                </button>
+            }
+        </div>
+
+        <div class="chips">
+            <button class="chip @(_status is null ? "on" : "")" @onclick="() => _status = null">Todas</button>
+            @foreach (var s in Enum.GetValues<ProgressStatus>())
+            {
+                var st = s;
+                <button class="chip @(_status == st ? "on" : "")" @onclick="() => _status = st">@Labels.Of(st) (@_items.Count(i => i.Progress == st))</button>
+            }
+        </div>
+
+        <div class="card list-card">
+            <h2>Temario @Labels.Of(_belt).ToLowerInvariant()</h2>
+            <div class="list">
+                @foreach (var group in _items.Where(i => _status is null || i.Progress == _status).GroupBy(i => i.Category).OrderBy(g => g.Key))
+                {
+                    <div class="day"><span>@Labels.Of(group.Key)</span><span>@group.Count()</span></div>
+                    @foreach (var t in group)
+                    {
+                        var item = t;
+                        <div class="item" style="cursor:default">
+                            <span class="cat-ic" style="color:@(item.Progress >= ProgressStatus.Competent ? "var(--accent)" : "var(--muted)")"><Icon Name="@(item.Progress >= ProgressStatus.Competent ? "check" : "target")" /></span>
+                            <a class="info" href="tecnicas/@item.Id" style="color:inherit">
+                                <div class="note">@item.Name</div>
+                                <div class="meta">@(item.PositionName ?? "Sin posición") · trabajada @item.TimesWorked @(item.TimesWorked == 1 ? "vez" : "veces")</div>
+                            </a>
+                            <select class="progress-select" value="@item.Progress" aria-label="Progreso de @item.Name"
+                                    @onchange="e => SetAsync(item.Id, e.Value)">
+                                @foreach (var s in Enum.GetValues<ProgressStatus>()) { <option value="@s">@Labels.Of(s)</option> }
+                            </select>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<BeltProgress> _progress = [];
+    private IReadOnlyList<TechniqueListItem> _items = [];
+    private Belt _belt;
+    private ProgressStatus? _status;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _progress = await Techniques.GetBeltProgressAsync();
+        var profileBelt = (await Profiles.GetAsync())?.Belt ?? Belt.White;
+        // Por defecto, el temario del cinturón siguiente al tuyo (o el tuyo si no hay temario siguiente).
+        var next = _progress.FirstOrDefault(p => p.Belt > profileBelt)?.Belt;
+        _belt = next ?? _progress.FirstOrDefault(p => p.Belt == profileBelt)?.Belt ?? _progress.FirstOrDefault()?.Belt ?? Belt.White;
+        await LoadItemsAsync();
+    }
+
+    private async Task SelectAsync(Belt belt)
+    {
+        _belt = belt;
+        _status = null;
+        await LoadItemsAsync();
+    }
+
+    private async Task LoadItemsAsync() =>
+        _items = await Techniques.SearchAsync(new TechniqueFilter(CurriculumBelt: _belt));
+
+    private async Task SetAsync(Guid id, object? value)
+    {
+        if (Enum.TryParse<ProgressStatus>(value?.ToString(), out var status))
+        {
+            await Techniques.SetProgressAsync(id, status);
+            _progress = await Techniques.GetBeltProgressAsync();
+            await LoadItemsAsync();
+        }
+    }
+}

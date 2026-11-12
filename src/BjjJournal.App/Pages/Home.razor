@@ -1,0 +1,206 @@
+@page "/"
+@inject StatsService Stats
+@inject ProfileService Profiles
+
+<PageTitle>Inicio · BJJ Journal</PageTitle>
+
+@if (_d is null)
+{
+    return;
+}
+
+<div class="view">
+    <div class="view-head">
+        <div>
+            <div class="label">Hola, @_name</div>
+            <h1 class="title">Inicio</h1>
+        </div>
+        <a class="btn pill" href="sesiones/nueva"><Icon Name="plus" />Sesión</a>
+    </div>
+
+    <div class="grid-2">
+        <div class="card hero">
+            <div class="label">Racha actual</div>
+            <div class="hero-row">
+                <div class="huge">@_d.CurrentStreakWeeks<span>@(_d.CurrentStreakWeeks == 1 ? "semana" : "semanas")</span></div>
+                <span class="accent"><Icon Name="flame" /></span>
+            </div>
+            <div class="small muted">
+                @if (_d.SessionsThisWeek == 0 && _d.CurrentStreakWeeks > 0)
+                {
+                    <text>Entrena esta semana para no perder la racha.</text>
+                }
+                else if (_d.CurrentStreakWeeks == 0)
+                {
+                    <text>Semanas seguidas con al menos una sesión.</text>
+                }
+                else
+                {
+                    <text>Esta semana ya has entrenado. Sigue así.</text>
+                }
+            </div>
+        </div>
+        <div class="kpi-grid">
+            <div class="kpi"><div class="label">Esta semana</div><div class="kpi-num">@_d.SessionsThisWeek<small>ses.</small></div></div>
+            <div class="kpi"><div class="label">Horas semana</div><div class="kpi-num">@Format.Hours(_d.HoursThisWeek)<small>h</small></div></div>
+            <div class="kpi"><div class="label">Total sesiones</div><div class="kpi-num">@_d.TotalSessions</div></div>
+            <div class="kpi"><div class="label">Horas en el tapiz</div><div class="kpi-num">@Format.Hours(_d.TotalHours)<small>h</small></div></div>
+        </div>
+    </div>
+
+    @if (_d.LastSession is { } last)
+    {
+        <div class="card list-card">
+            <h2>Última sesión · @Format.Relative(last.StartedAt)</h2>
+            <div class="list"><SessionRow Session="last" /></div>
+        </div>
+    }
+    else
+    {
+        <div class="card empty">
+            Aún no has registrado sesiones.<br /><br />
+            <a class="btn primary" href="sesiones/nueva"><Icon Name="plus" />Registrar la primera</a>
+        </div>
+    }
+
+    <div class="grid-2">
+        <div class="card">
+            <div class="card-head">
+                <h2>Por semana</h2>
+                <div class="segmented" style="width:auto">
+                    <button type="button" class="@(_hours ? "" : "on")" @onclick="() => _hours = false">Sesiones</button>
+                    <button type="button" class="@(_hours ? "on" : "")" @onclick="() => _hours = true">Horas</button>
+                </div>
+            </div>
+            <BarChart Values="@(_d.Weekly.Select(w => _hours ? w.Hours : w.Sessions).ToList())"
+                      Labels="@(_d.Weekly.Select(w => Format.WeekLabel(w.WeekStart)).ToList())"
+                      ValueLabel="@(v => _hours ? Format.Hours(v) : v.ToString("0"))"
+                      AriaLabel="Sesiones u horas por semana, últimas 12 semanas" />
+            <div class="small muted">Últimas 12 semanas. La barra de la derecha es la semana actual.</div>
+        </div>
+
+        <div class="card">
+            <div class="card-head"><h2>Satisfacción</h2><span class="small muted">media móvil 4 semanas</span></div>
+            @if (_d.SatisfactionTrend.All(p => p.Average is null))
+            {
+                <div class="empty">Sin datos todavía.</div>
+            }
+            else
+            {
+                <LineChart Values="@(_d.SatisfactionTrend.Select(p => p.Average).ToList())"
+                           Labels="@(_d.SatisfactionTrend.Select(p => Format.WeekLabel(p.WeekStart)).ToList())"
+                           AriaLabel="Satisfacción media móvil de 4 semanas" />
+            }
+        </div>
+
+        <div class="card">
+            <h2>Técnicas más trabajadas</h2>
+            @if (_d.TopTechniques.Count == 0)
+            {
+                <div class="empty">Añade técnicas a tus sesiones para verlas aquí.</div>
+            }
+            else
+            {
+                var max = _d.TopTechniques.Max(t => t.Count);
+                <div class="hbar-rows">
+                    @foreach (var t in _d.TopTechniques)
+                    {
+                        <a class="hbar-row" href="tecnicas/@t.TechniqueId" style="color:inherit">
+                            <div class="row-top"><span><span class="dot" style="background:@Labels.CategoryColor(t.Category)"></span> @t.Name</span><span class="n">@t.Count</span></div>
+                            <div class="bar"><div class="fill" style="width:@Pct(t.Count, max); background:@Labels.CategoryColor(t.Category)"></div></div>
+                        </a>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="card">
+            <div class="card-head"><h2>Sumisiones</h2><span class="small"><span class="accent">● a favor</span> <span class="danger-text">● en contra</span></span></div>
+            @if (_d.Submissions.Count == 0)
+            {
+                <div class="empty">Registra rolls con sumisiones para ver este gráfico.</div>
+            }
+            else
+            {
+                var max = _d.Submissions.Max(s => s.For + s.Against);
+                <div class="hbar-rows">
+                    @foreach (var s in _d.Submissions.Take(10))
+                    {
+                        <div class="hbar-row">
+                            <div class="row-top"><span>@s.Name</span><span class="n"><span class="accent">@s.For</span> · <span class="danger-text">@s.Against</span></span></div>
+                            <div class="duo">
+                                @if (s.For > 0) { <span class="for" style="width:@Pct(s.For, max)"></span> }
+                                @if (s.Against > 0) { <span class="against" style="width:@Pct(s.Against, max)"></span> }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="card">
+            <h2>Gi / No-gi</h2>
+            <DonutChart Slices="@AttireSlices" AriaLabel="Reparto gi y no-gi" />
+        </div>
+
+        <div class="card">
+            <h2>Tipo de sesión</h2>
+            <DonutChart Slices="@TypeSlices" AriaLabel="Reparto por tipo de sesión" />
+        </div>
+    </div>
+
+    @if (_d.Gaps.Categories.Count > 0 || _d.Gaps.Positions.Count > 0)
+    {
+        <div class="card">
+            <div class="card-head"><h2><span class="accent"><Icon Name="alert" /></span> Lagunas del juego</h2><span class="small muted">sin trabajar en 30 días</span></div>
+            @if (_d.Gaps.Categories.Count > 0)
+            {
+                <div class="label" style="margin-bottom:6px">Categorías</div>
+                <div class="chips" style="margin-bottom:12px">
+                    @foreach (var c in _d.Gaps.Categories)
+                    {
+                        <a class="chip" href="tecnicas?cat=@c"><span class="dot" style="background:@Labels.CategoryColor(c)"></span>@Labels.Of(c)</a>
+                    }
+                </div>
+            }
+            @if (_d.Gaps.Positions.Count > 0)
+            {
+                <div class="label" style="margin-bottom:6px">Posiciones</div>
+                <div class="chips">
+                    @foreach (var p in _d.Gaps.Positions.Take(_allGaps ? int.MaxValue : 12))
+                    {
+                        <span class="chip">@p</span>
+                    }
+                    @if (!_allGaps && _d.Gaps.Positions.Count > 12)
+                    {
+                        <button class="chip" @onclick="() => _allGaps = true">+@(_d.Gaps.Positions.Count - 12) más</button>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private static readonly string[] Palette = ["var(--series-1)", "var(--series-2)", "#f472b6", "#fdba74", "#a78bfa"];
+
+    private Dashboard? _d;
+    private string _name = "";
+    private bool _hours;
+    private bool _allGaps;
+
+    private IReadOnlyList<DonutChart.Slice> AttireSlices =>
+        _d!.AttireSplit.Select((kv, i) => new DonutChart.Slice(Labels.Of(kv.Key), kv.Value, Palette[i])).ToList();
+
+    private IReadOnlyList<DonutChart.Slice> TypeSlices =>
+        _d!.TypeSplit.Select((kv, i) => new DonutChart.Slice(Labels.Of(kv.Key), kv.Value, Palette[i % Palette.Length])).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _name = (await Profiles.GetAsync())?.DisplayName ?? "";
+        _d = await Stats.GetDashboardAsync();
+    }
+
+    private static string Pct(int value, int max) =>
+        (max == 0 ? 0 : 100.0 * value / max).ToString("0.#", CultureInfo.InvariantCulture) + "%";
+}
