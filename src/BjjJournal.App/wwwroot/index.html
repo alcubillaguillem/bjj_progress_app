@@ -29,6 +29,16 @@
         <span class="dismiss">✕</span>
     </div>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
-    <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' }).catch(() => {});</script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            // Si había una versión anterior instalada, recarga una vez cuando entra la nueva.
+            const hadController = !!navigator.serviceWorker.controller;
+            let reloaded = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (hadController && !reloaded) { reloaded = true; location.reload(); }
+            });
+            navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' }).catch(() => {});
+        }
+    </script>
 </body>
 </html>

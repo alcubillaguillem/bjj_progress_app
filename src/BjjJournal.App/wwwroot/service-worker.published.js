@@ -2,8 +2,9 @@
 // offline support. See https://aka.ms/blazor-offline-considerations
 
 self.importScripts('./service-worker-assets.js');
-self.addEventListener('install', event => event.waitUntil(onInstall(event)));
-self.addEventListener('activate', event => event.waitUntil(onActivate(event)));
+// Las versiones nuevas se activan en cuanto se descargan (sin esperar a cerrar todas las pestañas).
+self.addEventListener('install', event => event.waitUntil(onInstall(event).then(() => self.skipWaiting())));
+self.addEventListener('activate', event => event.waitUntil(onActivate(event).then(() => self.clients.claim())));
 self.addEventListener('fetch', event => event.respondWith(onFetch(event)));
 
 const cacheNamePrefix = 'offline-cache-';

@@ -3,104 +3,151 @@
 
 <PageTitle>@L["Sesiones"] · BJJ Journal</PageTitle>
 
-<div class="view">
+<div class="view narrow">
     <div class="view-head">
         <h1 class="title">@L["Sesiones"]</h1>
-        <div class="actions">
-            @if (!_calendar) { <button class="btn pill @(_showFilters ? "on" : "")" @onclick="() => _showFilters = !_showFilters"><Icon Name="search" />@L["Filtros"]@(ActiveFilters > 0 ? $" ({ActiveFilters})" : "")</button> }
-            <a class="btn primary pill" style="background:var(--accent)" href="sesiones/nueva"><Icon Name="plus" />@L["Nueva"]</a>
-        </div>
+        <a class="btn primary pill" style="background:var(--accent)" href="sesiones/nueva?fecha=@_selected.ToString("yyyy-MM-dd")"><Icon Name="plus" />@L["Nueva"]</a>
     </div>
 
-    <div class="segmented" style="max-width:320px">
-        <button type="button" class="@(_calendar ? "on" : "")" @onclick="() => _calendar = true"><Icon Name="calendar" /> @L["Calendario"]</button>
-        <button type="button" class="@(_calendar ? "" : "on")" @onclick="() => _calendar = false"><Icon Name="book" /> @L["Lista"]</button>
-    </div>
-
-    @if (_calendar)
-    {
-        <SessionCalendar />
-    }
-    else
-    {
-    @if (_showFilters)
-    {
-        <div class="card filters">
-            <div class="filter-row">
-                <label class="field">@L["Desde"]<input type="date" @bind="_from" @bind:after="LoadAsync" /></label>
-                <label class="field">@L["Hasta"]<input type="date" @bind="_to" @bind:after="LoadAsync" /></label>
-                <label class="field">@L["Tipo"]
-                    <select @bind="_type" @bind:after="LoadAsync">
-                        <option value="">@L["Todos"]</option>
-                        @foreach (var t in Enum.GetValues<SessionType>()) { <option value="@t">@Labels.Of(t)</option> }
-                    </select>
-                </label>
-                <label class="field">Gi / No-gi
-                    <select @bind="_attire" @bind:after="LoadAsync">
-                        <option value="">@L["Ambos"]</option>
-                        @foreach (var a in Enum.GetValues<Attire>()) { <option value="@a">@Labels.Of(a)</option> }
-                    </select>
-                </label>
-                <label class="field">@L["Satisfacción mínima"]
-                    <select @bind="_minSat" @bind:after="LoadAsync">
-                        <option value="">@L["Cualquiera"]</option>
-                        @for (var i = 2; i <= 5; i++) { <option value="@i">@L.F("{0} o más", i)</option> }
-                    </select>
-                </label>
+    <section class="card cal">
+        <div class="cal-top">
+            <button type="button" class="cal-month" @onclick="TodayAsync" title="@L["Ir a hoy"]">
+                <span>@MonthName</span><small>@_month.Year</small>
+            </button>
+            <div class="cal-arrows">
+                <button class="round-btn" aria-label="@L["Mes anterior"]" @onclick="() => MoveAsync(-1)"><Icon Name="left" /></button>
+                <button class="round-btn" aria-label="@L["Mes siguiente"]" @onclick="() => MoveAsync(1)"><Icon Name="right" /></button>
             </div>
-            @if (ActiveFilters > 0)
-            {
-                <button class="btn ghost small" @onclick="ClearAsync"><Icon Name="x" />@L["Quitar filtros"]</button>
-            }
         </div>
-    }
 
-    @if (_items is not null)
-    {
-        <div class="small muted">@L.N(_items.Count, "sesión", "sesiones") · @Format.Hours(_items.Sum(s => s.DurationMinutes) / 60.0) h</div>
-        <div class="card list-card">
-            @if (_items.Count == 0)
-            {
-                <div class="empty">@L[ActiveFilters > 0 ? "Ninguna sesión cumple los filtros." : "Aún no hay sesiones."]</div>
-            }
-            else
-            {
-                <div class="list">
-                    @foreach (var month in _items.GroupBy(s => Format.Local(s.StartedAt).ToString("MMMM yyyy")))
-                    {
-                        <div class="day"><span>@month.Key</span><span>@month.Count() · @Format.Hours(month.Sum(s => s.DurationMinutes) / 60.0) h</span></div>
-                        @foreach (var s in month)
-                        {
-                            <SessionRow Session="s" />
-                        }
-                    }
-                </div>
-            }
+        <div class="cal-week">
+            @foreach (var name in WeekDays) { <span>@name</span> }
         </div>
-    }
-    }
+
+        @if (_cal is not null)
+        {
+            <div class="cal-days">
+                @foreach (var day in _cal.Days)
+                {
+                    var d = day;
+                    if (!d.InMonth)
+                    {
+                        <span class="cal-cell"></span>
+                        continue;
+                    }
+
+                    <button type="button" class="cal-cell" aria-label="@d.Date.ToString("D")" aria-pressed="@(d.Date == _selected)" @onclick="() => Select(d.Date)">
+                        <span class="cal-dot @(d.Sessions.Count > 0 ? "on" : "") @(d.Date == Today ? "today" : "") @(d.Date == _selected ? "sel" : "")"
+                              style="@(d.Sessions.Count > 0 ? $"--c:{TypeColor(d.Sessions[0].Type)}" : "")">
+                            @d.Date.Day
+                            @if (d.Sessions.Count > 1) { <i>@d.Sessions.Count</i> }
+                        </span>
+                    </button>
+                }
+            </div>
+
+            <div class="cal-stats">
+                <div><b>@_cal.Sessions</b><span>@L["sesiones"]</span></div>
+                <div><b>@Format.Hours(_cal.Hours)</b><span>@L["horas"]</span></div>
+                <div><b>@_cal.ActiveDays</b><span>@L["días"]</span></div>
+                <div><b>@_cal.SubmissionsFor</b><span>@L["sumisiones"]</span></div>
+            </div>
+        }
+    </section>
+
+    <section class="day-sec">
+        <h2 class="day-title">@DayTitle</h2>
+
+        @if (SelectedSessions.Count == 0)
+        {
+            <div class="card day-empty">
+                <span class="muted">@L[_selected > Today ? "Sin sesiones todavía." : "Día de descanso."]</span>
+                <a class="btn small" href="sesiones/nueva?fecha=@_selected.ToString("yyyy-MM-dd")"><Icon Name="plus" />@L["Añadir sesión"]</a>
+            </div>
+        }
+
+        @foreach (var s in SelectedSessions)
+        {
+            <a class="card s-card" href="sesiones/@s.Id" style="--c:@TypeColor(s.Type)">
+                <div class="s-main">
+                    <div class="s-title">@Labels.Of(s.Type) <span>· @Labels.Of(s.Attire)</span></div>
+                    <div class="s-sub">@Format.Local(s.StartedAt).ToString("HH:mm") · @Format.Minutes(s.DurationMinutes)@(s.Location is null ? "" : $" · {s.Location}")</div>
+                    <div class="s-pills">
+                        @if (s.TechniqueCount > 0) { <span><Icon Name="book" />@L.N(s.TechniqueCount, "técnica", "técnicas")</span> }
+                        @if (s.RollCount > 0) { <span><Icon Name="swords" />@L.N(s.RollCount, "roll", "rolls")</span> }
+                        @if (s.SubmissionsFor + s.SubmissionsAgainst > 0) { <span><Icon Name="target" /><b class="accent">@s.SubmissionsFor</b>–<b class="danger-text">@s.SubmissionsAgainst</b></span> }
+                    </div>
+                </div>
+                <div class="s-side">
+                    <Stars Value="s.Satisfaction" />
+                    <Icon Name="right" />
+                </div>
+            </a>
+        }
+    </section>
 </div>
 
 @code {
-    private IReadOnlyList<SessionListItem>? _items;
-    private bool _calendar = true;
-    private bool _showFilters;
-    private DateOnly? _from;
-    private DateOnly? _to;
-    private SessionType? _type;
-    private Attire? _attire;
-    private int? _minSat;
+    private static DateOnly Today => DateOnly.FromDateTime(DateTime.Today);
 
-    private int ActiveFilters => new object?[] { _from, _to, _type, _attire, _minSat }.Count(x => x is not null);
+    private DateOnly _month = new(DateTime.Today.Year, DateTime.Today.Month, 1);
+    private DateOnly _selected = Today;
+    private CalendarMonth? _cal;
 
-    protected override Task OnInitializedAsync() => LoadAsync();
+    private IReadOnlyList<SessionListItem> SelectedSessions =>
+        _cal?.Days.FirstOrDefault(d => d.Date == _selected)?.Sessions ?? [];
 
-    private async Task LoadAsync() =>
-        _items = await SessionsSvc.ListAsync(new SessionFilter(_from, _to, _type, _attire, _minSat));
-
-    private Task ClearAsync()
+    private string MonthName
     {
-        (_from, _to, _type, _attire, _minSat) = (null, null, null, null, null);
-        return LoadAsync();
+        get
+        {
+            var m = _month.ToString("MMMM");
+            return char.ToUpperInvariant(m[0]) + m[1..];
+        }
     }
+
+    private string DayTitle
+    {
+        get
+        {
+            var text = _selected.ToString(L.IsEnglish ? "dddd, d MMMM" : "dddd, d 'de' MMMM");
+            return char.ToUpperInvariant(text[0]) + text[1..];
+        }
+    }
+
+    /// <summary>Iniciales de lunes a domingo en el idioma activo.</summary>
+    private static IEnumerable<string> WeekDays =>
+        Enumerable.Range(1, 7).Select(i => CultureInfo.CurrentCulture.DateTimeFormat.GetShortestDayName((DayOfWeek)(i % 7)).ToUpperInvariant()[..1]);
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync() => _cal = await SessionsSvc.GetCalendarAsync(_month.Year, _month.Month);
+
+    private void Select(DateOnly date) => _selected = date;
+
+    private async Task MoveAsync(int months)
+    {
+        _month = _month.AddMonths(months);
+        await LoadAsync();
+        var isCurrent = _month.Year == Today.Year && _month.Month == Today.Month;
+        var lastTrained = _cal!.Days.LastOrDefault(d => d.InMonth && d.Sessions.Count > 0)?.Date;
+        _selected = isCurrent ? Today : lastTrained ?? _month;
+    }
+
+    private async Task TodayAsync()
+    {
+        _month = new DateOnly(Today.Year, Today.Month, 1);
+        _selected = Today;
+        await LoadAsync();
+    }
+
+    public static string TypeColor(SessionType t) => t switch
+    {
+        SessionType.Class => "#c5f04a",
+        SessionType.OpenMat => "#38bdf8",
+        SessionType.Drilling => "#facc15",
+        SessionType.Competition => "#f87171",
+        SessionType.Private => "#a78bfa",
+        _ => "#9a9aa3",
+    };
 }

@@ -1,6 +1,5 @@
 @page "/sesiones/{Id:guid}"
 @inject SessionService SessionsSvc
-@inject NavigationManager Nav
 
 <PageTitle>@L["Sesión"] · BJJ Journal</PageTitle>
 
@@ -12,87 +11,99 @@
 
 <div class="view narrow">
     <div class="view-head">
-        <div class="back-row">
-            <a class="round-btn" aria-label="@L["Volver"]" href="sesiones"><Icon Name="left" /></a>
-            <h1 class="subtitle">@Labels.Of(_s.Type) · @Labels.Of(_s.Attire)</h1>
-        </div>
+        <a class="round-btn" aria-label="@L["Volver"]" href="sesiones"><Icon Name="left" /></a>
         <a class="btn small" href="sesiones/@_s.Id/editar"><Icon Name="edit" />@L["Editar"]</a>
     </div>
 
-    <div class="card hero">
-        <div class="label cap">@Format.DayLong(_s.StartedAt)</div>
-        <div class="hero-row">
-            <div class="huge">@_s.DurationMinutes<span>min</span></div>
-            <div style="text-align:right">
-                <div class="label">@L["Satisfacción"]</div>
-                <div style="font-size:18px"><Stars Value="_s.Satisfaction" /></div>
-                <div class="small muted">@Labels.Satisfaction(_s.Satisfaction)</div>
-            </div>
+    <section class="card sv-hero" style="--c:@SessionList.TypeColor(_s.Type)">
+        <div class="sv-date">@DayTitle</div>
+        <h1 class="sv-title">@Labels.Of(_s.Type) <span>· @Labels.Of(_s.Attire)</span></h1>
+        <div class="sv-meta">
+            <span><Icon Name="clock" />@Format.Local(_s.StartedAt).ToString("HH:mm") · @Format.Minutes(_s.DurationMinutes)</span>
+            @if (_s.Location is not null) { <span><Icon Name="pin" />@_s.Location</span> }
         </div>
-        @if (_s.Location is not null) { <div class="stat-line"><span><Icon Name="pin" /> @_s.Location</span></div> }
-    </div>
+        <div class="sv-sat">
+            <Stars Value="_s.Satisfaction" />
+            <span>@Labels.Satisfaction(_s.Satisfaction)</span>
+        </div>
+    </section>
 
-    @if (_s.Rolls.Count > 0)
-    {
-        <div class="score">
-            <div><div class="label">@L["Sumisiones a favor"]</div><div class="n accent">@_s.SubmissionsFor</div></div>
-            <div><div class="label">@L["En contra"]</div><div class="n danger-text">@_s.SubmissionsAgainst</div></div>
-            <div><div class="label">@L["Rolls"]</div><div class="n">@_s.Rolls.Count</div></div>
-        </div>
-    }
+    <div class="sv-stats">
+        <div><b>@_s.Techniques.Count</b><span>@L["técnicas"]</span></div>
+        <div><b>@_s.Rolls.Count</b><span>@L["rolls"]</span></div>
+        <div><b class="accent">@_s.SubmissionsFor</b><span>@L["a favor"]</span></div>
+        <div><b class="danger-text">@_s.SubmissionsAgainst</b><span>@L["en contra"]</span></div>
+    </div>
 
     @if (_s.Notes is not null)
     {
-        <div class="card"><h2>@L["Notas"]</h2><p class="notes">@_s.Notes</p></div>
+        <section class="card sv-notes">
+            <h2>@L["Notas"]</h2>
+            <p class="notes">@_s.Notes</p>
+        </section>
     }
 
-    <div class="card list-card">
-        <h2>@L["Técnicas"] (@_s.Techniques.Count)</h2>
+    <section class="card">
+        <h2>@L["Técnicas"]</h2>
         @if (_s.Techniques.Count == 0)
         {
             <div class="empty">@L["No apuntaste técnicas en esta sesión."]</div>
         }
-        <div class="list">
-            @foreach (var t in _s.Techniques)
-            {
-                <a class="item" href="tecnicas/@t.TechniqueId">
-                    <span class="dot" style="background:@Labels.CategoryColor(t.Category)"></span>
-                    <span class="info"><div class="note">@t.Name</div><div class="meta">@Labels.Of(t.Category)</div></span>
-                    <span class="tag">@Labels.Of(t.Focus)</span>
-                </a>
-            }
-        </div>
-    </div>
+        @foreach (var group in _s.Techniques.GroupBy(t => t.Focus).OrderBy(g => g.Key))
+        {
+            <div class="sv-focus">@Labels.Of(group.Key)</div>
+            <div class="sv-techs">
+                @foreach (var t in group)
+                {
+                    <a class="sv-tech" href="tecnicas/@t.TechniqueId" style="--c:@Labels.CategoryColor(t.Category)">
+                        <span class="sv-tech-name">@t.Name</span>
+                        <span class="sv-tech-cat">@Labels.Of(t.Category)</span>
+                    </a>
+                }
+            </div>
+        }
+    </section>
 
     @if (_s.Rolls.Count > 0)
     {
-        <div class="card list-card">
+        <section class="card">
             <h2>@L["Rolls"]</h2>
-            <div class="list">
+            <div class="sv-rolls">
                 @foreach (var (r, i) in _s.Rolls.Select((r, i) => (r, i)))
                 {
-                    <div class="item" style="cursor:default; align-items:flex-start">
-                        <span class="cat-ic"><Icon Name="swords" /></span>
-                        <span class="info">
-                            <div class="note">@(r.PartnerName ?? $"Roll {i + 1}") @if (r.PartnerBelt is { } b) { <span class="tag" style="margin-left:4px">@Labels.Of(b)</span> }</div>
-                            @if (r.Events.Count == 0)
-                            {
-                                <div class="meta">@L["Sin eventos"]</div>
-                            }
-                            @foreach (var e in r.Events)
-                            {
-                                <div class="small" style="margin-top:4px">
-                                    <span class="@(e.Kind == RollEventKind.SubmissionFor ? "accent" : e.Kind == RollEventKind.SubmissionAgainst ? "danger-text" : "muted")">@Labels.Of(e.Kind)</span>
-                                    @if (e.TechniqueName is not null) { <text> · @e.TechniqueName</text> }
-                                    @if (e.PositionName is not null) { <span class="muted"> · @e.PositionName</span> }
-                                </div>
-                            }
-                        </span>
-                        <span class="amt">@r.DurationMinutes<small>min</small></span>
+                    <div class="sv-roll">
+                        <div class="sv-roll-head">
+                            <span class="sv-avatar" style="background:@(r.PartnerBelt is { } pb ? Labels.BeltColor(pb) : "var(--raised)"); color:@(r.PartnerBelt is Belt.White or null ? "#111" : "#fff")">@Initial(r.PartnerName, i)</span>
+                            <div class="sv-roll-who">
+                                <strong>@(r.PartnerName ?? $"{L["Roll"]} {i + 1}")</strong>
+                                <span>@(r.PartnerBelt is { } b ? L.F("Cinturón {0}", Labels.Of(b).ToLowerInvariant()) : L["Cinturón sin indicar"])</span>
+                            </div>
+                            <span class="sv-roll-min">@r.DurationMinutes min</span>
+                        </div>
+                        @if (r.Events.Count == 0)
+                        {
+                            <div class="small muted">@L["Sin eventos"]</div>
+                        }
+                        else
+                        {
+                            <ul class="sv-events">
+                                @foreach (var e in r.Events)
+                                {
+                                    <li class="ev-@e.Kind">
+                                        <span class="ev-ic"><Icon Name="@EventIcon(e.Kind)" /></span>
+                                        <span class="ev-text">
+                                            <b>@EventLabel(e.Kind)</b>
+                                            @if (e.TechniqueName is not null) { <span> · @e.TechniqueName</span> }
+                                            @if (e.PositionName is not null) { <span class="muted"> · @e.PositionName</span> }
+                                        </span>
+                                    </li>
+                                }
+                            </ul>
+                        }
                     </div>
                 }
             </div>
-        </div>
+        </section>
     }
 </div>
 
@@ -102,9 +113,38 @@
     private SessionDetail? _s;
     private bool _loaded;
 
+    private string DayTitle
+    {
+        get
+        {
+            var text = Format.Local(_s!.StartedAt).ToString(L.IsEnglish ? "dddd, d MMMM yyyy" : "dddd, d 'de' MMMM 'de' yyyy");
+            return char.ToUpperInvariant(text[0]) + text[1..];
+        }
+    }
+
     protected override async Task OnParametersSetAsync()
     {
         _s = await SessionsSvc.GetAsync(Id);
         _loaded = true;
     }
+
+    private static string Initial(string? name, int i) =>
+        string.IsNullOrWhiteSpace(name) ? (i + 1).ToString() : name.Trim()[..1].ToUpperInvariant();
+
+    private string EventLabel(RollEventKind k) => k switch
+    {
+        RollEventKind.SubmissionFor => L["Finalizas"],
+        RollEventKind.SubmissionAgainst => L["Te finalizan"],
+        _ => Labels.Of(k),
+    };
+
+    private static string EventIcon(RollEventKind k) => k switch
+    {
+        RollEventKind.SubmissionFor => "target",
+        RollEventKind.SubmissionAgainst => "x",
+        RollEventKind.SweepFor => "sweep",
+        RollEventKind.PassFor => "pass",
+        RollEventKind.Escape => "escape",
+        _ => "check",
+    };
 }

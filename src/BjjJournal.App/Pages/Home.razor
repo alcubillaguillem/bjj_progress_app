@@ -159,7 +159,7 @@
                 <div class="chips" style="margin-bottom:12px">
                     @foreach (var c in _d.Gaps.Categories)
                     {
-                        <a class="chip" href="tecnicas?cat=@c"><span class="dot" style="background:@Labels.CategoryColor(c)"></span>@Labels.Of(c)</a>
+                        <a class="chip" href="tecnicas/categoria/@CategoryStyle.Slug(c)"><span class="dot" style="background:@Labels.CategoryColor(c)"></span>@Labels.Of(c)</a>
                     }
                 </div>
             }

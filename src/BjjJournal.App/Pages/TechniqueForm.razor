@@ -75,6 +75,9 @@
 @code {
     [Parameter] public Guid? Id { get; set; }
 
+    /// <summary>Categoría preseleccionada al crear desde la pantalla de una categoría.</summary>
+    [SupplyParameterFromQuery(Name = "cat")] public string? Cat { get; set; }
+
     private TechniqueInput? _input;
     private IReadOnlyList<PositionDto> _positions = [];
     private string? _newPosition;
@@ -96,7 +99,7 @@
     protected override async Task OnInitializedAsync()
     {
         _positions = await Positions.ListAsync();
-        _input = Id is { } id ? await Techniques.GetInputAsync(id) : new TechniqueInput();
+        _input = Id is { } id ? await Techniques.GetInputAsync(id) : new TechniqueInput { Category = Enum.TryParse<TechniqueCategory>(Cat, out var c) ? c : default };
         if (_input is null)
         {
             Nav.NavigateTo("tecnicas", replace: true);

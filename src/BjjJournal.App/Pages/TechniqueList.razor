@@ -1,6 +1,5 @@
 @page "/tecnicas"
 @inject TechniqueService Techniques
-@inject PositionService Positions
 
 <PageTitle>@L["Técnicas"] · BJJ Journal</PageTitle>
 
@@ -13,151 +12,71 @@
         </div>
     </div>
 
-    <div class="filters">
-        <div class="search-box">
-            <Icon Name="search" />
-            <input type="search" placeholder="@L["Nombre, posición, etiqueta o notas…"]" @bind="_query" @bind:event="oninput" @bind:after="LoadAsync" />
-        </div>
-        <div class="chips scroll">
-            <button class="chip @(_category is null ? "on" : "")" @onclick="() => SetCategory(null)">@L["Todas"]</button>
-            @foreach (var c in Enum.GetValues<TechniqueCategory>())
-            {
-                var cat = c;
-                <button class="chip @(_category == cat ? "on" : "")" @onclick="() => SetCategory(cat)"><span class="dot" style="background:@Labels.CategoryColor(cat)"></span>@Labels.Of(cat)</button>
-            }
-        </div>
-        <div class="filter-row">
-            <select @bind="_positionId" @bind:after="LoadAsync" aria-label="@L["Posición"]">
-                <option value="">@L["Todas las posiciones"]</option>
-                @foreach (var p in _positions) { <option value="@p.Id">@p.Name</option> }
-            </select>
-            <select @bind="_tag" @bind:after="LoadAsync" aria-label="@L["Etiqueta"]">
-                <option value="">@L["Todas las etiquetas"]</option>
-                @foreach (var t in _tags) { <option value="@t">#@t</option> }
-            </select>
-        </div>
+    <div class="search-box">
+        <Icon Name="search" />
+        <input type="search" placeholder="@L["Buscar técnica, posición o etiqueta…"]" @bind="_query" @bind:event="oninput" @bind:after="SearchAsync" />
     </div>
 
-    @if (_items is not null)
+    @if (_all is null)
     {
-        <div class="group-bar">
-            <span class="small muted">@L.N(_items.Count, "técnica", "técnicas")</span>
-            <div class="segmented" style="width:auto">
-                <button type="button" class="@(_byPosition ? "" : "on")" @onclick="() => SetGrouping(false)">@L["Categoría"]</button>
-                <button type="button" class="@(_byPosition ? "on" : "")" @onclick="() => SetGrouping(true)">@L["Posición"]</button>
-            </div>
-        </div>
+        return;
+    }
 
-        @if (_items.Count == 0)
+    @if (!string.IsNullOrWhiteSpace(_query))
+    {
+        <div class="small muted">@L.N(_results.Count, "resultado", "resultados")</div>
+        @if (_results.Count == 0)
         {
             <div class="card empty">@L["No hay técnicas que coincidan."] <a href="tecnicas/nueva">@L["Crear una"]</a></div>
         }
+        <div class="t-grid">
+            @foreach (var t in _results) { <TechniqueCard T="t" ShowCategory="true" /> }
+        </div>
+    }
+    else
+    {
+        <div class="t-summary">
+            <div><b>@_all.Count</b><span>@L["técnicas"]</span></div>
+            <div><b>@_all.Count(t => t.Progress == ProgressStatus.Mastered)</b><span>@L["dominadas"]</span></div>
+            <div><b>@_all.Count(t => t.Progress == ProgressStatus.Competent)</b><span>@L["competentes"]</span></div>
+            <div><b>@_all.Count(t => t.Progress == ProgressStatus.Learning)</b><span>@L["aprendiendo"]</span></div>
+        </div>
 
-        <div class="groups">
-            @foreach (var g in Groups)
+        <div class="cat-grid">
+            @foreach (var c in Enum.GetValues<TechniqueCategory>())
             {
-                var key = g.Key;
-                var open = IsOpen(key, g.Items.Count);
-                var done = g.Items.Count(t => t.Progress >= ProgressStatus.Competent);
-                <div class="card group @(open ? "open" : "")">
-                    <button type="button" class="group-head" aria-expanded="@open" @onclick="() => Toggle(key)">
-                        <span class="group-ic" style="background:@g.Color"></span>
-                        <span class="group-title">@g.Title</span>
-                        <span class="group-meta">@done/@g.Items.Count</span>
-                        <span class="group-chev"><Icon Name="right" /></span>
-                    </button>
-                    <div class="bar group-bar-fill"><div class="fill" style="width:@Pct(done, g.Items.Count); background:@g.Color"></div></div>
-                    @if (open)
+                var items = _all.Where(t => t.Category == c).ToList();
+                <a class="cat-tile @(items.Count == 0 ? "empty-tile" : "")" href="tecnicas/categoria/@CategoryStyle.Slug(c)" style="--c:@Labels.CategoryColor(c)">
+                    <span class="cat-ic"><Icon Name="@CategoryStyle.Icon(c)" /></span>
+                    <span class="cat-name">@Labels.Of(c)</span>
+                    <span class="cat-count">@L.N(items.Count, "técnica", "técnicas")</span>
+                    <span class="cat-stack" aria-hidden="true">
+                        @foreach (var s in new[] { ProgressStatus.Mastered, ProgressStatus.Competent, ProgressStatus.Learning })
+                        {
+                            var n = items.Count(t => t.Progress == s);
+                            if (n > 0) { <i class="p-@s" style="flex:@n"></i> }
+                        }
+                        @if (items.Count(t => t.Progress == ProgressStatus.NotStarted) is var rest && rest > 0) { <i class="p-NotStarted" style="flex:@rest"></i> }
+                    </span>
+                    @if (items.Count > 0)
                     {
-                        <div class="list cols">
-                            @foreach (var t in g.Items)
-                            {
-                                <a class="item" href="tecnicas/@t.Id">
-                                    <span class="cat-ic" style="color:@Labels.CategoryColor(t.Category)"><span class="dot" style="background:currentColor; width:12px; height:12px"></span></span>
-                                    <span class="info">
-                                        <div class="note">@t.Name</div>
-                                        <div class="meta">@(_byPosition ? Labels.Of(t.Category) : t.PositionName ?? L["Sin posición"]) · @Labels.Of(t.Progress)@foreach (var tag in t.Tags.Take(2)) { <text> #@tag</text> }</div>
-                                    </span>
-                                    <span class="amt">@t.TimesWorked<small>@(t.LastWorked is { } l ? Format.Relative(l) : L["sin usar"])</small></span>
-                                </a>
-                            }
-                        </div>
+                        <span class="cat-top">@items.OrderByDescending(t => t.TimesWorked).First().Name</span>
                     }
-                </div>
+                </a>
             }
         </div>
     }
 </div>
 
 @code {
-    [SupplyParameterFromQuery(Name = "cat")] public string? Cat { get; set; }
-
-    private IReadOnlyList<TechniqueListItem>? _items;
-    private IReadOnlyList<PositionDto> _positions = [];
-    private IReadOnlyList<string> _tags = [];
+    private IReadOnlyList<TechniqueListItem>? _all;
+    private IReadOnlyList<TechniqueListItem> _results = [];
     private string _query = "";
-    private TechniqueCategory? _category;
-    private Guid? _positionId;
-    private string? _tag;
-    private bool _byPosition;
-    private readonly HashSet<string> _toggled = [];
 
-    private sealed record Group(string Key, string Title, string Color, List<TechniqueListItem> Items);
+    protected override async Task OnInitializedAsync() => _all = await Techniques.SearchAsync(new TechniqueFilter());
 
-    /// <summary>Grupos por categoría (orden del enum) o por posición (alfabético, «Sin posición» al final). Dentro, las más trabajadas primero.</summary>
-    private IEnumerable<Group> Groups => _byPosition
-        ? _items!.GroupBy(t => t.PositionName)
-            .OrderBy(g => g.Key is null).ThenBy(g => g.Key, StringComparer.CurrentCultureIgnoreCase)
-            .Select(g => new Group("p:" + (g.Key ?? ""), g.Key ?? L["Sin posición"], "var(--muted)", Sorted(g)))
-        : _items!.GroupBy(t => t.Category).OrderBy(g => g.Key)
-            .Select(g => new Group("c:" + g.Key, Labels.Of(g.Key), Labels.CategoryColor(g.Key), Sorted(g)));
-
-    private static List<TechniqueListItem> Sorted(IEnumerable<TechniqueListItem> items) =>
-        items.OrderByDescending(t => t.TimesWorked).ThenBy(t => t.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
-
-    /// <summary>Cerrados por defecto; abiertos si hay búsqueda o filtros, o si el grupo es el único.</summary>
-    private bool IsOpen(string key, int count)
-    {
-        var filtered = !string.IsNullOrWhiteSpace(_query) || _category is not null || _positionId is not null || !string.IsNullOrEmpty(_tag);
-        var byDefault = filtered || Groups.Count() == 1;
-        return _toggled.Contains(key) ? !byDefault : byDefault;
-    }
-
-    private void Toggle(string key)
-    {
-        if (!_toggled.Remove(key))
-        {
-            _toggled.Add(key);
-        }
-    }
-
-    private void SetGrouping(bool byPosition)
-    {
-        _byPosition = byPosition;
-        _toggled.Clear();
-    }
-
-    private static string Pct(int value, int max) =>
-        (max == 0 ? 0 : 100.0 * value / max).ToString("0.#", CultureInfo.InvariantCulture) + "%";
-
-    protected override async Task OnInitializedAsync()
-    {
-        if (Enum.TryParse<TechniqueCategory>(Cat, out var c))
-        {
-            _category = c;
-        }
-
-        _positions = await Positions.ListAsync();
-        _tags = await Techniques.ListTagsAsync();
-        await LoadAsync();
-    }
-
-    private Task SetCategory(TechniqueCategory? category)
-    {
-        _category = category;
-        return LoadAsync();
-    }
-
-    private async Task LoadAsync() =>
-        _items = await Techniques.SearchAsync(new TechniqueFilter(_query, _category, _positionId, string.IsNullOrEmpty(_tag) ? null : _tag));
+    private async Task SearchAsync() =>
+        _results = string.IsNullOrWhiteSpace(_query)
+            ? []
+            : (await Techniques.SearchAsync(new TechniqueFilter(_query))).OrderByDescending(t => t.TimesWorked).ToList();
 }

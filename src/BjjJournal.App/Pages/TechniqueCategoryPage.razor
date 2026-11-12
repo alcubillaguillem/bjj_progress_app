@@ -1,0 +1,78 @@
+@page "/tecnicas/categoria/{Slug}"
+@inject TechniqueService Techniques
+@inject NavigationManager Nav
+
+<PageTitle>@(_cat is { } c ? Labels.Of(c) : L["Técnicas"]) · BJJ Journal</PageTitle>
+
+@if (_cat is not { } cat || _items is null)
+{
+    return;
+}
+
+<div class="view">
+    <section class="cat-hero" style="--c:@Labels.CategoryColor(cat)">
+        <div class="cat-hero-top">
+            <a class="round-btn" aria-label="@L["Volver"]" href="tecnicas"><Icon Name="left" /></a>
+            <a class="btn small" href="tecnicas/nueva?cat=@cat"><Icon Name="plus" />@L["Nueva"]</a>
+        </div>
+        <div class="cat-hero-main">
+            <span class="cat-ic big"><Icon Name="@CategoryStyle.Icon(cat)" /></span>
+            <div>
+                <h1 class="title">@Labels.Of(cat)</h1>
+                <div class="muted">@L.N(_items.Count, "técnica", "técnicas") · @L.F("{0} dominadas o competentes", _items.Count(t => t.Progress >= ProgressStatus.Competent))</div>
+            </div>
+        </div>
+    </section>
+
+    <div class="chips scroll">
+        <button class="chip @(_status is null ? "on" : "")" @onclick="() => _status = null">@L["Todas"] (@_items.Count)</button>
+        @foreach (var s in Enum.GetValues<ProgressStatus>().Reverse())
+        {
+            var st = s;
+            var n = _items.Count(t => t.Progress == st);
+            if (n > 0)
+            {
+                <button class="chip @(_status == st ? "on" : "")" @onclick="() => _status = st">@Labels.Of(st) (@n)</button>
+            }
+        }
+    </div>
+
+    @if (_items.Count == 0)
+    {
+        <div class="card empty">@L["Aún no tienes técnicas en esta categoría."] <a href="tecnicas/nueva?cat=@cat">@L["Crear una"]</a></div>
+    }
+
+    @foreach (var group in Visible.GroupBy(t => t.PositionName).OrderBy(g => g.Key is null).ThenByDescending(g => g.Sum(t => t.TimesWorked)))
+    {
+        <div class="t-group-title">@(group.Key ?? L["Sin posición"]) <span>@group.Count()</span></div>
+        <div class="t-grid">
+            @foreach (var t in group.OrderByDescending(t => t.TimesWorked).ThenBy(t => t.Name, StringComparer.CurrentCultureIgnoreCase))
+            {
+                <TechniqueCard T="t" />
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string? Slug { get; set; }
+
+    private TechniqueCategory? _cat;
+    private IReadOnlyList<TechniqueListItem>? _items;
+    private ProgressStatus? _status;
+
+    private IEnumerable<TechniqueListItem> Visible => _items!.Where(t => _status is null || t.Progress == _status);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _cat = CategoryStyle.FromSlug(Slug);
+        if (_cat is null)
+        {
+            Nav.NavigateTo("tecnicas", replace: true);
+            return;
+        }
+
+        _status = null;
+        _items = await Techniques.SearchAsync(new TechniqueFilter(Category: _cat));
+    }
+}
