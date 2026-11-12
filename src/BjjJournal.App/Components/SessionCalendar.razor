@@ -1,0 +1,199 @@
+@* Sesiones en calendario mensual. Al pulsar un día se ve qué se hizo: técnicas, rolls y notas. *@
+@inject SessionService SessionsSvc
+
+<div class="card cal-card">
+    <div class="month-nav">
+        <button class="round-btn" aria-label="@L["Mes anterior"]" @onclick="() => MoveAsync(-1)"><Icon Name="left" /></button>
+        <button class="btn ghost small" @onclick="TodayAsync" title="@L["Ir a hoy"]"><strong>@_month.ToString("MMMM yyyy")</strong></button>
+        <button class="round-btn" aria-label="@L["Mes siguiente"]" @onclick="() => MoveAsync(1)"><Icon Name="right" /></button>
+    </div>
+
+    @if (_cal is not null)
+    {
+        <div class="cal-summary">
+            <span><b>@_cal.Sessions</b> @L[_cal.Sessions == 1 ? "sesión" : "sesiones"]</span>
+            <span><b>@Format.Hours(_cal.Hours)</b> h</span>
+            <span><b>@_cal.ActiveDays</b> @L[_cal.ActiveDays == 1 ? "día" : "días"]</span>
+            <span><b>@_cal.SubmissionsFor</b> @L["sumisiones"]</span>
+        </div>
+
+        <div class="cal-grid" role="grid">
+            @foreach (var name in WeekDays)
+            {
+                <div class="cal-wd">@name</div>
+            }
+            @foreach (var day in _cal.Days)
+            {
+                var d = day;
+                <button type="button"
+                        class="cal-day @(d.InMonth ? "" : "out") @(d.Sessions.Count > 0 ? "has" : "") @(d.Date == Today ? "today" : "") @(d.Date == _selected ? "sel" : "")"
+                        aria-label="@d.Date.ToString("D") · @L.N(d.Sessions.Count, "sesión", "sesiones")"
+                        @onclick="() => SelectAsync(d.Date)">
+                    <span class="n">@d.Date.Day</span>
+                    <span class="dots">
+                        @foreach (var s in d.Sessions.Take(3))
+                        {
+                            <span style="background:@TypeColor(s.Type)"></span>
+                        }
+                    </span>
+                </button>
+            }
+        </div>
+
+        <div class="cal-legend">
+            @foreach (var t in Enum.GetValues<SessionType>().Where(t => _cal.Days.Any(d => d.Sessions.Any(s => s.Type == t))))
+            {
+                <span><span class="dot" style="background:@TypeColor(t)"></span>@Labels.Of(t)</span>
+            }
+        </div>
+    }
+</div>
+
+<div class="card day-card">
+    <div class="card-head">
+        <h2>@DayTitle</h2>
+        <a class="btn small" href="sesiones/nueva?fecha=@_selected.ToString("yyyy-MM-dd")"><Icon Name="plus" />@L["Añadir"]</a>
+    </div>
+
+    @if (_details.Count == 0)
+    {
+        <div class="empty">@L["Este día no entrenaste."]</div>
+    }
+    @foreach (var s in _details)
+    {
+        <a class="day-session" href="sesiones/@s.Id">
+            <div class="ds-head">
+                <span class="dot" style="background:@TypeColor(s.Type); width:10px; height:10px"></span>
+                <strong>@Labels.Of(s.Type) · @Labels.Of(s.Attire)</strong>
+                <span class="muted small">@Format.Local(s.StartedAt).ToString("HH:mm") · @Format.Minutes(s.DurationMinutes)</span>
+                <span class="ds-stars"><Stars Value="s.Satisfaction" /></span>
+            </div>
+
+            @if (s.Techniques.Count > 0)
+            {
+                <div class="ds-label">@L["Técnicas"]</div>
+                <div class="chips">
+                    @foreach (var t in s.Techniques)
+                    {
+                        <span class="chip small-chip"><span class="dot" style="background:@Labels.CategoryColor(t.Category)"></span>@t.Name<span class="muted"> · @Labels.Of(t.Focus)</span></span>
+                    }
+                </div>
+            }
+
+            @if (s.Rolls.Count > 0)
+            {
+                <div class="ds-label">@L["Rolls"] · <span class="accent">@s.SubmissionsFor</span>–<span class="danger-text">@s.SubmissionsAgainst</span></div>
+                <div class="ds-rolls">
+                    @foreach (var r in s.Rolls)
+                    {
+                        <div class="ds-roll">
+                            <span>@(r.PartnerName ?? L["Roll"])@if (r.PartnerBelt is { } b) { <span class="belt-dot" style="background:@Labels.BeltColor(b)" title="@Labels.Of(b)"></span> }</span>
+                            <span class="muted small">
+                                @if (r.Events.Count == 0) { @L["sin eventos"] }
+                                @foreach (var (e, i) in r.Events.Select((e, i) => (e, i)))
+                                {
+                                    @(i > 0 ? " · " : "")<span class="@(e.Kind == RollEventKind.SubmissionFor ? "accent" : e.Kind == RollEventKind.SubmissionAgainst ? "danger-text" : "")">@Short(e)</span>
+                                }
+                            </span>
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(s.Notes))
+            {
+                <div class="ds-notes">“@s.Notes”</div>
+            }
+        </a>
+    }
+</div>
+
+@code {
+    private string DayTitle
+    {
+        get
+        {
+            var text = _selected.ToString(L.IsEnglish ? "dddd d MMMM" : "dddd d 'de' MMMM");
+            return char.ToUpperInvariant(text[0]) + text[1..];
+        }
+    }
+
+    private static DateOnly Today => DateOnly.FromDateTime(DateTime.Today);
+
+    private DateOnly _month = new(DateTime.Today.Year, DateTime.Today.Month, 1);
+    private DateOnly _selected = Today;
+    private CalendarMonth? _cal;
+    private List<SessionDetail> _details = [];
+
+    /// <summary>Iniciales de lunes a domingo en el idioma activo.</summary>
+    private static IEnumerable<string> WeekDays =>
+        Enumerable.Range(1, 7).Select(i => CultureInfo.CurrentCulture.DateTimeFormat.GetShortestDayName((DayOfWeek)(i % 7)).ToUpperInvariant()[..1]);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMonthAsync();
+        await SelectAsync(_selected);
+    }
+
+    private async Task LoadMonthAsync() => _cal = await SessionsSvc.GetCalendarAsync(_month.Year, _month.Month);
+
+    private async Task MoveAsync(int months)
+    {
+        _month = _month.AddMonths(months);
+        await LoadMonthAsync();
+
+        // Al cambiar de mes, abre el último día con sesiones de ese mes (o el día 1).
+        var last = _cal!.Days.LastOrDefault(d => d.InMonth && d.Sessions.Count > 0)?.Date;
+        await SelectAsync(_month.Year == Today.Year && _month.Month == Today.Month ? Today : last ?? _month);
+    }
+
+    private async Task TodayAsync()
+    {
+        _month = new DateOnly(Today.Year, Today.Month, 1);
+        await LoadMonthAsync();
+        await SelectAsync(Today);
+    }
+
+    private async Task SelectAsync(DateOnly date)
+    {
+        _selected = date;
+        if (date.Year != _month.Year || date.Month != _month.Month)
+        {
+            _month = new DateOnly(date.Year, date.Month, 1);
+            await LoadMonthAsync();
+        }
+
+        var ids = _cal!.Days.FirstOrDefault(d => d.Date == date)?.Sessions.Select(s => s.Id) ?? [];
+        var details = new List<SessionDetail>();
+        foreach (var id in ids)
+        {
+            if (await SessionsSvc.GetAsync(id) is { } detail)
+            {
+                details.Add(detail);
+            }
+        }
+
+        _details = details;
+    }
+
+    private string Short(RollEventItem e)
+    {
+        var what = e.Kind switch
+        {
+            RollEventKind.SubmissionFor => L["Finalizas"],
+            RollEventKind.SubmissionAgainst => L["Te finalizan"],
+            _ => Labels.Of(e.Kind),
+        };
+        return e.TechniqueName is null ? what : $"{what}: {e.TechniqueName}";
+    }
+
+    public static string TypeColor(SessionType t) => t switch
+    {
+        SessionType.Class => "var(--accent)",
+        SessionType.OpenMat => "#38bdf8",
+        SessionType.Drilling => "#facc15",
+        SessionType.Competition => "#f87171",
+        SessionType.Private => "#a78bfa",
+        _ => "var(--muted)",
+    };
+}

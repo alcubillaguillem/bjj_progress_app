@@ -7,11 +7,22 @@
     <div class="view-head">
         <h1 class="title">@L["Sesiones"]</h1>
         <div class="actions">
-            <button class="btn pill @(_showFilters ? "on" : "")" @onclick="() => _showFilters = !_showFilters"><Icon Name="search" />@L["Filtros"]@(ActiveFilters > 0 ? $" ({ActiveFilters})" : "")</button>
+            @if (!_calendar) { <button class="btn pill @(_showFilters ? "on" : "")" @onclick="() => _showFilters = !_showFilters"><Icon Name="search" />@L["Filtros"]@(ActiveFilters > 0 ? $" ({ActiveFilters})" : "")</button> }
             <a class="btn primary pill" style="background:var(--accent)" href="sesiones/nueva"><Icon Name="plus" />@L["Nueva"]</a>
         </div>
     </div>
 
+    <div class="segmented" style="max-width:320px">
+        <button type="button" class="@(_calendar ? "on" : "")" @onclick="() => _calendar = true"><Icon Name="calendar" /> @L["Calendario"]</button>
+        <button type="button" class="@(_calendar ? "" : "on")" @onclick="() => _calendar = false"><Icon Name="book" /> @L["Lista"]</button>
+    </div>
+
+    @if (_calendar)
+    {
+        <SessionCalendar />
+    }
+    else
+    {
     @if (_showFilters)
     {
         <div class="card filters">
@@ -67,10 +78,12 @@
             }
         </div>
     }
+    }
 </div>
 
 @code {
     private IReadOnlyList<SessionListItem>? _items;
+    private bool _calendar = true;
     private bool _showFilters;
     private DateOnly? _from;
     private DateOnly? _to;

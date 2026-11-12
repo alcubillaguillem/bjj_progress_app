@@ -316,5 +316,16 @@ internal static class English
         ["La contraseña es demasiado débil."] = "The password is too weak.",
         ["Demasiados intentos. Espera un minuto."] = "Too many attempts. Wait a minute.",
         ["La sesión ha caducado. Vuelve a entrar."] = "Your session has expired. Sign in again.",
+        ["Calendario"] = "Calendar",
+        ["Lista"] = "List",
+        ["Ir a hoy"] = "Go to today",
+        ["día"] = "day",
+        ["días"] = "days",
+        ["sumisiones"] = "submissions",
+        ["Este día no entrenaste."] = "You didn't train this day.",
+        ["sin eventos"] = "no events",
+        ["Finalizas"] = "You submit",
+        ["Te finalizan"] = "Submitted by",
+        ["sin usar"] = "unused",
     };
 }

@@ -370,3 +370,50 @@ a.counter:hover { background: var(--raised); }
 .rank-row .pct { font-size: 11px; color: var(--muted); text-align: right; }
 .summary-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
 .summary-line b { font: 700 18px var(--num); }
+
+/* ---------- Calendario de sesiones ---------- */
+.cal-card { display: flex; flex-direction: column; gap: 12px; }
+.cal-summary { display: flex; justify-content: space-around; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.cal-summary b { font: 700 18px var(--num); color: var(--text); margin-right: 3px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cal-wd { text-align: center; font-size: 11px; color: var(--muted); letter-spacing: .06em; padding: 2px 0 4px; }
+.cal-day {
+  aspect-ratio: 1 / 1; border: 1px solid transparent; border-radius: 12px; background: var(--raised); color: var(--text);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; padding: 0; min-width: 0;
+}
+.cal-day .n { font: 600 14px var(--num); line-height: 1; }
+.cal-day .dots { display: flex; gap: 3px; height: 6px; }
+.cal-day .dots span { width: 6px; height: 6px; border-radius: 50%; }
+.cal-day.out { opacity: .35; }
+.cal-day.has { background: var(--accent-bg); }
+.cal-day.today .n { color: var(--accent); }
+.cal-day.today { border-color: var(--line); }
+.cal-day.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+@media (min-width: 900px) { .cal-day { aspect-ratio: auto; height: 64px; } .cal-day .n { font-size: 16px; } }
+.cal-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.cal-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.day-card { display: flex; flex-direction: column; gap: 10px; }
+.day-card .card-head { margin-bottom: 0; }
+.day-session { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 14px; background: var(--raised); color: var(--text); }
+.day-session:hover { outline: 1px solid var(--line); }
+.ds-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ds-stars { margin-left: auto; font-size: 13px; }
+.ds-label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.small-chip { padding: 4px 10px; font-size: 12px; cursor: default; }
+.ds-rolls { display: flex; flex-direction: column; gap: 6px; }
+.ds-roll { display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+.belt-dot { display: inline-block; width: 18px; height: 6px; border-radius: 2px; margin-left: 8px; vertical-align: middle; border: 1px solid var(--line); }
+.ds-notes { font-size: 13px; color: var(--text-2); font-style: italic; }
+
+/* ---------- Técnicas agrupadas ---------- */
+.group-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.groups { display: flex; flex-direction: column; gap: 10px; }
+.group { padding: 0; overflow: hidden; }
+.group-head { width: 100%; display: flex; align-items: center; gap: 12px; padding: 16px 18px 12px; background: none; border: 0; color: var(--text); cursor: pointer; text-align: left; }
+.group-ic { width: 14px; height: 14px; border-radius: 4px; flex: 0 0 auto; }
+.group-title { font-weight: 600; font-size: 16px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.group-meta { font: 600 13px var(--num); color: var(--muted); }
+.group-chev { color: var(--muted); transition: transform .2s; display: grid; }
+.group.open .group-chev { transform: rotate(90deg); }
+.group-bar-fill { margin: 0 18px 14px; height: 4px; }
+.group .list { padding: 0 18px 8px; }

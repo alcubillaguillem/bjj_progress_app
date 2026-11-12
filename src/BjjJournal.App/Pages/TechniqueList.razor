@@ -40,25 +40,51 @@
 
     @if (_items is not null)
     {
-        <div class="small muted">@L.N(_items.Count, "técnica", "técnicas")</div>
-        <div class="card list-card">
-            @if (_items.Count == 0)
-            {
-                <div class="empty">@L["No hay técnicas que coincidan."] <a href="tecnicas/nueva">@L["Crear una"]</a></div>
-            }
-            <div class="list cols">
-                @foreach (var t in _items)
-                {
-                    <a class="item" href="tecnicas/@t.Id">
-                        <span class="cat-ic" style="color:@Labels.CategoryColor(t.Category)"><span class="dot" style="background:currentColor; width:12px; height:12px"></span></span>
-                        <span class="info">
-                            <div class="note">@t.Name</div>
-                            <div class="meta">@Labels.Of(t.Category)@(t.PositionName is null ? "" : $" · {t.PositionName}")@foreach (var tag in t.Tags.Take(3)) { <text> #@tag</text> }</div>
-                        </span>
-                        <span class="amt">@t.TimesWorked<small>@(t.LastWorked is { } l ? Format.Relative(l) : "sin usar")</small></span>
-                    </a>
-                }
+        <div class="group-bar">
+            <span class="small muted">@L.N(_items.Count, "técnica", "técnicas")</span>
+            <div class="segmented" style="width:auto">
+                <button type="button" class="@(_byPosition ? "" : "on")" @onclick="() => SetGrouping(false)">@L["Categoría"]</button>
+                <button type="button" class="@(_byPosition ? "on" : "")" @onclick="() => SetGrouping(true)">@L["Posición"]</button>
             </div>
+        </div>
+
+        @if (_items.Count == 0)
+        {
+            <div class="card empty">@L["No hay técnicas que coincidan."] <a href="tecnicas/nueva">@L["Crear una"]</a></div>
+        }
+
+        <div class="groups">
+            @foreach (var g in Groups)
+            {
+                var key = g.Key;
+                var open = IsOpen(key, g.Items.Count);
+                var done = g.Items.Count(t => t.Progress >= ProgressStatus.Competent);
+                <div class="card group @(open ? "open" : "")">
+                    <button type="button" class="group-head" aria-expanded="@open" @onclick="() => Toggle(key)">
+                        <span class="group-ic" style="background:@g.Color"></span>
+                        <span class="group-title">@g.Title</span>
+                        <span class="group-meta">@done/@g.Items.Count</span>
+                        <span class="group-chev"><Icon Name="right" /></span>
+                    </button>
+                    <div class="bar group-bar-fill"><div class="fill" style="width:@Pct(done, g.Items.Count); background:@g.Color"></div></div>
+                    @if (open)
+                    {
+                        <div class="list cols">
+                            @foreach (var t in g.Items)
+                            {
+                                <a class="item" href="tecnicas/@t.Id">
+                                    <span class="cat-ic" style="color:@Labels.CategoryColor(t.Category)"><span class="dot" style="background:currentColor; width:12px; height:12px"></span></span>
+                                    <span class="info">
+                                        <div class="note">@t.Name</div>
+                                        <div class="meta">@(_byPosition ? Labels.Of(t.Category) : t.PositionName ?? L["Sin posición"]) · @Labels.Of(t.Progress)@foreach (var tag in t.Tags.Take(2)) { <text> #@tag</text> }</div>
+                                    </span>
+                                    <span class="amt">@t.TimesWorked<small>@(t.LastWorked is { } l ? Format.Relative(l) : L["sin usar"])</small></span>
+                                </a>
+                            }
+                        </div>
+                    }
+                </div>
+            }
         </div>
     }
 </div>
@@ -73,6 +99,46 @@
     private TechniqueCategory? _category;
     private Guid? _positionId;
     private string? _tag;
+    private bool _byPosition;
+    private readonly HashSet<string> _toggled = [];
+
+    private sealed record Group(string Key, string Title, string Color, List<TechniqueListItem> Items);
+
+    /// <summary>Grupos por categoría (orden del enum) o por posición (alfabético, «Sin posición» al final). Dentro, las más trabajadas primero.</summary>
+    private IEnumerable<Group> Groups => _byPosition
+        ? _items!.GroupBy(t => t.PositionName)
+            .OrderBy(g => g.Key is null).ThenBy(g => g.Key, StringComparer.CurrentCultureIgnoreCase)
+            .Select(g => new Group("p:" + (g.Key ?? ""), g.Key ?? L["Sin posición"], "var(--muted)", Sorted(g)))
+        : _items!.GroupBy(t => t.Category).OrderBy(g => g.Key)
+            .Select(g => new Group("c:" + g.Key, Labels.Of(g.Key), Labels.CategoryColor(g.Key), Sorted(g)));
+
+    private static List<TechniqueListItem> Sorted(IEnumerable<TechniqueListItem> items) =>
+        items.OrderByDescending(t => t.TimesWorked).ThenBy(t => t.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
+
+    /// <summary>Cerrados por defecto; abiertos si hay búsqueda o filtros, o si el grupo es el único.</summary>
+    private bool IsOpen(string key, int count)
+    {
+        var filtered = !string.IsNullOrWhiteSpace(_query) || _category is not null || _positionId is not null || !string.IsNullOrEmpty(_tag);
+        var byDefault = filtered || Groups.Count() == 1;
+        return _toggled.Contains(key) ? !byDefault : byDefault;
+    }
+
+    private void Toggle(string key)
+    {
+        if (!_toggled.Remove(key))
+        {
+            _toggled.Add(key);
+        }
+    }
+
+    private void SetGrouping(bool byPosition)
+    {
+        _byPosition = byPosition;
+        _toggled.Clear();
+    }
+
+    private static string Pct(int value, int max) =>
+        (max == 0 ? 0 : 100.0 * value / max).ToString("0.#", CultureInfo.InvariantCulture) + "%";
 
     protected override async Task OnInitializedAsync()
     {

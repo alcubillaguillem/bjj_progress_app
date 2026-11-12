@@ -98,14 +98,55 @@ public sealed class SessionService(JournalContext context, TimeProvider time)
     }
 
     /// <summary>Valores por defecto del formulario: ahora, la última duración, el último tipo y gi/no-gi usados.</summary>
-    public async Task<SessionInput> GetDefaultsAsync(CancellationToken ct = default)
+    /// <summary>Calendario de un mes con las sesiones de cada día (semanas de lunes a domingo).</summary>
+    public async Task<CalendarMonth> GetCalendarAsync(int year, int month, CancellationToken ct = default)
+    {
+        var data = await context.GetAsync(ct);
+        var first = new DateOnly(year, month, 1);
+        var last = first.AddMonths(1).AddDays(-1);
+        var gridStart = first.WeekStart();
+        var gridEnd = last.WeekStart().AddDays(6);
+
+        var byDay = data.Sessions.Active()
+            .Select(s => (Day: time.LocalDate(s.StartedAt), Session: s))
+            .Where(x => x.Day >= gridStart && x.Day <= gridEnd)
+            .GroupBy(x => x.Day)
+            .ToDictionary(g => g.Key, g => g.OrderBy(x => x.Session.StartedAt).Select(x => x.Session.ToListItem()).ToList());
+
+        var days = new List<CalendarDay>();
+        for (var d = gridStart; d <= gridEnd; d = d.AddDays(1))
+        {
+            days.Add(new CalendarDay(d, d.Month == month, byDay.TryGetValue(d, out var list) ? list : []));
+        }
+
+        var inMonth = days.Where(d => d.InMonth).SelectMany(d => d.Sessions).ToList();
+        return new CalendarMonth(
+            year,
+            month,
+            days,
+            inMonth.Count,
+            inMonth.Sum(s => s.DurationMinutes) / 60.0,
+            days.Count(d => d.InMonth && d.Sessions.Count > 0),
+            inMonth.Sum(s => s.SubmissionsFor));
+    }
+
+    /// <summary>Valores por defecto de una sesión nueva. Con <paramref name="date"/>, ese día a la hora de la última sesión.</summary>
+    public async Task<SessionInput> GetDefaultsAsync(DateOnly? date = null, CancellationToken ct = default)
     {
         var data = await context.GetAsync(ct);
         var last = data.Sessions.Active().MaxBy(s => s.CreatedAt);
         var now = TimeZoneInfo.ConvertTime(time.GetUtcNow(), time.LocalTimeZone);
+        var start = new DateTimeOffset(now.Year, now.Month, now.Day, now.Hour, now.Minute, 0, now.Offset);
+        if (date is { } day)
+        {
+            var hour = last is null ? new TimeOnly(19, 0) : TimeOnly.FromDateTime(TimeZoneInfo.ConvertTime(last.StartedAt, time.LocalTimeZone).DateTime);
+            var local = day.ToDateTime(hour);
+            start = new DateTimeOffset(local, time.LocalTimeZone.GetUtcOffset(local));
+        }
+
         return new SessionInput
         {
-            StartedAt = new DateTimeOffset(now.Year, now.Month, now.Day, now.Hour, now.Minute, 0, now.Offset),
+            StartedAt = start,
             DurationMinutes = last?.DurationMinutes ?? 90,
             Type = last?.Type ?? SessionType.Class,
             Attire = last?.Attire ?? Attire.Gi,

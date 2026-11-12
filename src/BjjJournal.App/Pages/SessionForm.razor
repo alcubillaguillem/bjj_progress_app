@@ -137,6 +137,9 @@
 @code {
     [Parameter] public Guid? Id { get; set; }
 
+    /// <summary>Día elegido en el calendario (yyyy-MM-dd) para una sesión nueva.</summary>
+    [SupplyParameterFromQuery(Name = "fecha")] public string? Fecha { get; set; }
+
     private SessionInput? _input;
     private DateTime _local;
     private IReadOnlyList<TechniqueListItem> _techniques = [];
@@ -149,7 +152,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _input = Id is { } id ? await SessionsSvc.GetInputAsync(id) : await SessionsSvc.GetDefaultsAsync();
+        _input = Id is { } id ? await SessionsSvc.GetInputAsync(id) : await SessionsSvc.GetDefaultsAsync(
+                DateOnly.TryParseExact(Fecha, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day) ? day : null);
         if (_input is null)
         {
             Nav.NavigateTo("sesiones", replace: true);
