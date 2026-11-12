@@ -2,6 +2,8 @@
 
 Diario de entrenamiento de jiu-jitsu brasileño. Trabajo final de C#.
 
+**App:** https://alcubillaguillem.github.io/bjj_progress_app/
+
 App web instalable (PWA) hecha íntegramente en C# con **.NET 10 + Blazor WebAssembly**. Funciona en el ordenador y en el móvil, sin conexión, con los datos guardados en el propio dispositivo. Mismo enfoque y estilo visual que *Control Finanzas* (gastos-erasmus): barra inferior en el móvil, menú lateral en pantallas de 900 px o más, tema oscuro con acento lima.
 
 ## Qué hace (fase 1 + parte de la 2)
