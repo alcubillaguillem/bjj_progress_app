@@ -4,36 +4,36 @@
 @inject SyncService Sync
 @inject NavigationManager Nav
 
-<PageTitle>Acceso · BJJ Journal</PageTitle>
+<PageTitle>@L["Acceso"] · BJJ Journal</PageTitle>
 
 <div class="onboard">
     <img class="logo" src="icon.svg" alt="" />
-    <h1>@(_register ? "Crea tu cuenta" : "Entra en BJJ Journal")</h1>
-    <p class="muted" style="margin:0">Con una cuenta, tu diario se guarda en la nube y lo tienes en el móvil y en el ordenador.</p>
+    <h1>@L[_register ? "Crea tu cuenta" : "Entra en BJJ Journal"]</h1>
+    <p class="muted" style="margin:0">@L["Con una cuenta, tu diario se guarda en la nube y lo tienes en el móvil y en el ordenador."]</p>
 
-    <button type="button" class="btn google wide big-btn" disabled="@_busy" @onclick="Google"><GoogleLogo />Continuar con Google</button>
-    <div class="divider">o con tu correo</div>
+    <button type="button" class="btn google wide big-btn" disabled="@_busy" @onclick="Google"><GoogleLogo />@L["Continuar con Google"]</button>
+    <div class="divider">@L["o con tu correo"]</div>
 
     <form class="form" @onsubmit="SubmitAsync" @onsubmit:preventDefault>
-        <label class="field">Correo<input id="email" type="email" autocomplete="email" @bind="_email" placeholder="tu@correo.com" /></label>
-        <label class="field">Contraseña<input id="password" type="password" autocomplete="@(_register ? "new-password" : "current-password")" @bind="_password" placeholder="@(_register ? "Mínimo 6 caracteres" : "")" /></label>
-        @if (_error is not null) { <div class="error" role="alert">@_error</div> }
-        @if (_info is not null) { <div class="small accent" role="status">@_info</div> }
-        <button type="submit" class="btn primary big-btn" disabled="@_busy">@(_busy ? "Un momento…" : _register ? "Crear cuenta" : "Entrar")</button>
+        <label class="field">@L["Correo"]<input id="email" type="email" autocomplete="email" @bind="_email" placeholder="@L["tu@correo.com"]" /></label>
+        <label class="field">@L["Contraseña"]<input id="password" type="password" autocomplete="@(_register ? "new-password" : "current-password")" @bind="_password" placeholder="@(_register ? L["Mínimo 6 caracteres"] : "")" /></label>
+        @if (_error is not null) { <div class="error" role="alert">@L[_error]</div> }
+        @if (_info is not null) { <div class="small accent" role="status">@L[_info]</div> }
+        <button type="submit" class="btn primary big-btn" disabled="@_busy">@L[_busy ? "Un momento…" : _register ? "Crear cuenta" : "Entrar"]</button>
     </form>
 
     <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap" class="small">
         <button type="button" class="link-btn" @onclick="() => { _register = !_register; _error = null; _info = null; }">
-            @(_register ? "Ya tengo cuenta" : "Crear una cuenta")
+            @L[_register ? "Ya tengo cuenta" : "Crear una cuenta"]
         </button>
         @if (!_register)
         {
-            <button type="button" class="link-btn" @onclick="ResetAsync">He olvidado la contraseña</button>
+            <button type="button" class="link-btn" @onclick="ResetAsync">@L["He olvidado la contraseña"]</button>
         }
     </div>
 
-    <button type="button" class="btn ghost" @onclick="GuestAsync">Continuar sin cuenta</button>
-    <p class="small muted" style="margin:0">Sin cuenta, los datos se guardan solo en este dispositivo. Puedes iniciar sesión más tarde desde Perfil y se subirán.</p>
+    <button type="button" class="btn ghost" @onclick="GuestAsync">@L["Continuar sin cuenta"]</button>
+    <p class="small muted" style="margin:0">@L["Sin cuenta, los datos se guardan solo en este dispositivo. Puedes iniciar sesión más tarde desde Ajustes y se subirán."]</p>
 </div>
 
 @code {
@@ -97,7 +97,7 @@
         }
         catch (HttpRequestException)
         {
-            _error = "No hay conexión con el servidor. Inténtalo de nuevo o continúa sin cuenta.";
+            _error = L["No hay conexión con el servidor. Inténtalo de nuevo o continúa sin cuenta."];
         }
         finally
         {

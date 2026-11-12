@@ -19,8 +19,11 @@ App web instalable (PWA) hecha íntegramente en C# con **.NET 10 + Blazor WebAss
 | Filtros de sesiones por fechas, tipo, gi/no-gi y satisfacción | `/sesiones` |
 | Dashboard con las 6 métricas de F5 + lagunas del juego (30 días) | `/` |
 | Checklist por cinturón con barra de progreso (plantilla blanco y azul) | `/cinturon` |
-| Exportar/importar JSON versionado, con revisión de duplicados y fusionar o reemplazar | `/perfil` |
-| Tema oscuro (por defecto) y claro | `/perfil` |
+| Perfil: nivel por experiencia, cinturón, contadores y radares de sumisiones y sesiones | `/perfil` |
+| Sumisiones por mes o histórico: radar, ranking con %, a favor/en contra, con o sin posición | `/sumisiones` |
+| Exportar/importar JSON versionado, con revisión de duplicados y fusionar o reemplazar | `/ajustes` |
+| Tema oscuro (por defecto) y claro; idioma español o inglés | `/ajustes` |
+| Datos de ejemplo: un año de entrenamiento (`samples/demo-journal.json`, generador en `tools/`) | Ajustes › Importar |
 
 ## Cuentas y sincronización
 

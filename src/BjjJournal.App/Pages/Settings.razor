@@ -1,0 +1,176 @@
+@page "/ajustes"
+@inject BackupService Backup
+@inject IJSRuntime JS
+@inject ToastService Toasts
+@inject NavigationManager Nav
+@inject AuthService Auth
+@inject SyncService Sync
+
+<PageTitle>@L["Ajustes"] · BJJ Journal</PageTitle>
+
+<div class="view narrow">
+    <div class="back-row">
+        <a class="round-btn" aria-label="@L["Volver"]" href="perfil"><Icon Name="left" /></a>
+        <h1 class="subtitle">@L["Ajustes"]</h1>
+    </div>
+
+    @if (Auth.IsConfigured)
+    {
+        <div class="card form">
+            <h2>@L["Cuenta"]</h2>
+            @if (Auth.Session is { } session)
+            {
+                <div class="account">
+                    <span class="sync-dot @(Sync.LastError is null ? "" : "err")"></span>
+                    <div style="min-width:0; flex:1">
+                        <div style="font-weight:600; overflow:hidden; text-overflow:ellipsis">@(session.Email ?? L["Cuenta conectada"])</div>
+                        <div class="small muted">@(Sync.LastError is { } err ? L[err] : Sync.LastSyncAt is { } at ? L.F("Sincronizado a las {0}", at.ToLocalTime().ToString("HH:mm")) : L["Sincronizado con la nube"])</div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button class="btn" @onclick="SyncNowAsync"><Icon Name="upload" />@L["Sincronizar ahora"]</button>
+                    <button class="btn danger" @onclick="SignOutAsync">@L["Cerrar sesión"]</button>
+                </div>
+                @if (_confirmSignOut)
+                {
+                    <div class="small" style="color:var(--warn)">@L["Al cerrar sesión se borran los datos de este dispositivo. Siguen en tu cuenta. Pulsa otra vez para confirmar."]</div>
+                }
+            }
+            else
+            {
+                <p class="small muted" style="margin:0">@L["Estás usando la app sin cuenta: los datos solo están en este dispositivo. Inicia sesión para guardarlos en la nube y tenerlos en el móvil y el ordenador."]</p>
+                <a class="btn primary" href="acceso">@L["Iniciar sesión o crear cuenta"]</a>
+            }
+        </div>
+    }
+
+    <div class="card form">
+        <h2>@L["Idioma"]</h2>
+        <div class="segmented">
+            <button type="button" class="@(L.IsEnglish ? "" : "on")" @onclick="@(() => SetLangAsync("es"))"><Icon Name="globe" /> Español</button>
+            <button type="button" class="@(L.IsEnglish ? "on" : "")" @onclick="@(() => SetLangAsync("en"))"><Icon Name="globe" /> English</button>
+        </div>
+        <p class="small muted" style="margin:0">@L["Tus técnicas y notas se quedan como las escribiste."]</p>
+    </div>
+
+    <div class="card form">
+        <h2>@L["Apariencia"]</h2>
+        <div class="segmented">
+            <button type="button" class="@(_theme == "dark" ? "on" : "")" @onclick="@(() => SetThemeAsync("dark"))"><Icon Name="moon" /> @L["Oscuro"]</button>
+            <button type="button" class="@(_theme == "light" ? "on" : "")" @onclick="@(() => SetThemeAsync("light"))"><Icon Name="sun" /> @L["Claro"]</button>
+        </div>
+    </div>
+
+    <div class="card form">
+        <h2>@L["Copia de seguridad"]</h2>
+        <p class="small muted" style="margin:0">@L["Exporta un JSON de vez en cuando o para pasar los datos a otro dispositivo."]</p>
+        <button class="btn" @onclick="ExportAsync"><Icon Name="download" />@L["Exportar JSON"]</button>
+        <label class="btn" style="cursor:pointer"><Icon Name="upload" />@L["Importar JSON"]
+            <InputFile OnChange="OnFileAsync" accept=".json,application/json" style="display:none" />
+        </label>
+
+        @if (_preview is not null)
+        {
+            <div class="sub-card">
+                <strong>@L["Revisa antes de importar"]</strong>
+                <div class="stat-line">
+                    <span><strong>@_preview.Sessions</strong> @L["sesiones"]</span>
+                    <span><strong>@_preview.Techniques</strong> @L["técnicas"]</span>
+                    <span><strong>@_preview.Positions</strong> @L["posiciones"]</span>
+                </div>
+                @if (_preview.DuplicateTechniques + _preview.DuplicateSessions > 0)
+                {
+                    <div class="small" style="color:var(--warn)">@L.F("Duplicados: {0} técnicas y {1} sesiones ya existen. Al fusionar no se repiten.", _preview.DuplicateTechniques, _preview.DuplicateSessions)</div>
+                }
+                <div class="form-actions">
+                    <button class="btn primary" @onclick="() => ImportAsync(ImportMode.Merge)">@L["Fusionar"]</button>
+                    <button class="btn danger" @onclick="() => ImportAsync(ImportMode.Replace)">@L["Reemplazar todo"]</button>
+                    <button class="btn ghost" @onclick="() => { _preview = null; _json = null; }">@L["Cancelar"]</button>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="card">
+        <h2>@L["Acerca de"]</h2>
+        <p class="small muted" style="margin:0">@L["BJJ Journal · Trabajo final de C# · .NET 10 + Blazor WebAssembly. Funciona sin conexión y se puede instalar en el móvil («Añadir a pantalla de inicio») y en el ordenador."]</p>
+        <p class="small" style="margin:8px 0 0"><a href="privacidad.html">@L["Política de privacidad"]</a></p>
+    </div>
+</div>
+
+@code {
+    private string _theme = "dark";
+    private ImportPreview? _preview;
+    private string? _json;
+    private bool _confirmSignOut;
+
+    protected override async Task OnInitializedAsync() => _theme = await JS.InvokeAsync<string>("bjjTheme.get");
+
+    private async Task SetLangAsync(string lang)
+    {
+        if (lang != L.Lang)
+        {
+            await JS.InvokeVoidAsync("bjjLang.set", lang);
+        }
+    }
+
+    private async Task SyncNowAsync()
+    {
+        var result = await Sync.SyncAsync();
+        Toasts.Show(result.IsSuccess ? L["Sincronizado"] : L[result.Error!]);
+    }
+
+    private async Task SignOutAsync()
+    {
+        if (!_confirmSignOut)
+        {
+            _confirmSignOut = true;
+            return;
+        }
+
+        await Sync.SyncAsync();
+        await Auth.SignOutAsync();
+        await Sync.ClearLocalAsync();
+        Nav.NavigateTo("acceso", forceLoad: true);
+    }
+
+    private async Task SetThemeAsync(string theme)
+    {
+        _theme = theme;
+        await JS.InvokeVoidAsync("bjjTheme.set", theme);
+    }
+
+    private async Task ExportAsync()
+    {
+        var json = await Backup.ExportJsonAsync();
+        await JS.InvokeVoidAsync("bjjFiles.download", $"bjj-journal-{DateTime.Now:yyyy-MM-dd}.json", "application/json", json);
+        Toasts.Show(L["Copia exportada"]);
+    }
+
+    private async Task OnFileAsync(InputFileChangeEventArgs e)
+    {
+        using var reader = new StreamReader(e.File.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024));
+        _json = await reader.ReadToEndAsync();
+        var result = await Backup.PreviewAsync(_json);
+        if (!result.IsSuccess)
+        {
+            Toasts.Show(L[result.Error!]);
+            _json = null;
+            return;
+        }
+
+        _preview = result.Value;
+    }
+
+    private async Task ImportAsync(ImportMode mode)
+    {
+        var result = await Backup.ImportAsync(_json!, mode);
+        _preview = null;
+        _json = null;
+        Toasts.Show(result.IsSuccess ? L["Datos importados"] : L[result.Error!]);
+        if (result.IsSuccess)
+        {
+            Nav.NavigateTo("./");
+        }
+    }
+}

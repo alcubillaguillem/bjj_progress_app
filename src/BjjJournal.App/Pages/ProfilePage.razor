@@ -1,221 +1,108 @@
 @page "/perfil"
 @inject ProfileService Profiles
-@inject BackupService Backup
-@inject IJSRuntime JS
-@inject ToastService Toasts
-@inject NavigationManager Nav
-@inject AuthService Auth
-@inject SyncService Sync
+@inject StatsService Stats
 
-<PageTitle>Perfil · BJJ Journal</PageTitle>
+<PageTitle>@L["Perfil"] · BJJ Journal</PageTitle>
 
-@if (_p is null)
+@if (_p is null || _s is null)
 {
     return;
 }
 
 <div class="view narrow">
-    <h1 class="title">Perfil</h1>
+    <div class="view-head">
+        <h1 class="title">@L["Perfil"]</h1>
+        <div class="actions">
+            <a class="round-btn" href="perfil/editar" aria-label="@L["Editar perfil"]" title="@L["Editar perfil"]"><Icon Name="edit" /></a>
+            <a class="round-btn" href="ajustes" aria-label="@L["Ajustes"]" title="@L["Ajustes"]"><Icon Name="settings" /></a>
+        </div>
+    </div>
 
     <div class="card hero">
-        <div style="display:flex; align-items:center; gap:14px">
-            <div style="width:56px; height:56px; border-radius:50%; display:grid; place-items:center; font:700 22px var(--num); background:var(--accent); color:var(--accent-text)">@Initial</div>
-            <div style="min-width:0">
-                <div style="font-weight:600; font-size:18px">@_saved.DisplayName</div>
-                <div class="small muted">@Labels.Of(_saved.Belt) · @_saved.Stripes @(_saved.Stripes == 1 ? "grado" : "grados")@(_saved.GymName is null ? "" : $" · {_saved.GymName}")</div>
+        <div class="profile-top">
+            <div class="avatar-xl">@Initial</div>
+            <div class="profile-name">@_p.DisplayName</div>
+            <div class="profile-level">@L.F("Nivel {0}", _s.Level.Level)</div>
+            <div class="pill-row">
+                <span class="pill"><Icon Name="flame" />@L.N(_s.StreakWeeks, "semana seguida", "semanas seguidas")</span>
+                <span class="pill"><Icon Name="clock" />@Format.Hours(_s.Hours) h</span>
             </div>
         </div>
-        <div class="belt-bar" style="background:@Labels.BeltColor(_saved.Belt)">
-            <div style="position:absolute; right:12px; top:0; bottom:0; width:56px; background:@(_saved.Belt == Belt.Black ? "#dc2626" : "#111"); display:flex; gap:5px; justify-content:center">
-                @for (var i = 0; i < _saved.Stripes; i++) { <span style="width:5px; background:#f4f4f5"></span> }
-            </div>
-        </div>
-    </div>
 
-    @if (Auth.IsConfigured)
-    {
-        <div class="card form">
-            <h2>Cuenta</h2>
-            @if (Auth.Session is { } session)
+        <div>
+            <div class="bar" title="@_s.Level.Xp XP"><div class="fill" style="width:@Pct(_s.Level.Progress)"></div></div>
+            <div class="small muted" style="display:flex; justify-content:space-between; margin-top:6px">
+                <span>@_s.Level.Xp XP</span>
+                <span>@L.F("{0} XP para el nivel {1}", _s.Level.NextLevelXp - _s.Level.Xp, _s.Level.Level + 1)</span>
+            </div>
+        </div>
+
+        <div class="belt-wide" style="background:@Labels.BeltColor(_p.Belt); color:@(_p.Belt == Belt.White ? "#111" : "#fff")">
+            @Labels.Of(_p.Belt).ToUpperInvariant()
+            <div class="tip" style="background:@(_p.Belt == Belt.Black ? "#dc2626" : "#111")">
+                @for (var i = 0; i < _p.Stripes; i++) { <span></span> }
+            </div>
+        </div>
+
+        <div class="facts">
+            @if (!string.IsNullOrWhiteSpace(_p.GymName))
             {
-                <div class="account">
-                    <span class="sync-dot @(Sync.LastError is null ? "" : "err")"></span>
-                    <div style="min-width:0; flex:1">
-                        <div style="font-weight:600; overflow:hidden; text-overflow:ellipsis">@(session.Email ?? "Cuenta conectada")</div>
-                        <div class="small muted">@(Sync.LastError ?? (Sync.LastSyncAt is { } at ? $"Sincronizado a las {at.ToLocalTime():HH:mm}" : "Sincronizado con la nube"))</div>
-                    </div>
-                </div>
-                <div class="form-actions">
-                    <button class="btn" @onclick="SyncNowAsync"><Icon Name="upload" />Sincronizar ahora</button>
-                    <button class="btn danger" @onclick="SignOutAsync">Cerrar sesión</button>
-                </div>
-                @if (_confirmSignOut)
-                {
-                    <div class="small" style="color:var(--warn)">Al cerrar sesión se borran los datos de este dispositivo. Siguen en tu cuenta. Pulsa otra vez para confirmar.</div>
-                }
+                <div class="fact"><div class="label">@L["Gimnasio / academia"]</div><div>@_p.GymName</div></div>
             }
-            else
+            @if (_p.StartedTraining is { } since)
             {
-                <p class="small muted" style="margin:0">Estás usando la app sin cuenta: los datos solo están en este dispositivo. Inicia sesión para guardarlos en la nube y tenerlos en el móvil y el ordenador.</p>
-                <a class="btn primary" href="acceso">Iniciar sesión o crear cuenta</a>
+                <div class="fact"><div class="label">@L["Entrena desde"]</div><div>@since.ToString("MMMM yyyy") · @Since(since)</div></div>
             }
         </div>
-    }
 
-    <div class="card form">
-        <h2>Datos</h2>
-        <label class="field">Nombre<input @bind="_p.DisplayName" /></label>
-        <div class="field-row">
-            <label class="field">Cinturón
-                <select @bind="_p.Belt">
-                    @foreach (var b in Enum.GetValues<Belt>()) { <option value="@b">@Labels.Of(b)</option> }
-                </select>
-            </label>
-            <label class="field">Grados
-                <select @bind="_p.Stripes">
-                    @for (var i = 0; i <= 4; i++) { <option value="@i">@i</option> }
-                </select>
-            </label>
-        </div>
-        <div class="field-row">
-            <label class="field">Gimnasio<input @bind="_p.GymName" /></label>
-            <label class="field">Empecé a entrenar<input type="date" @bind="_p.StartedTraining" /></label>
-        </div>
-        @if (_error is not null) { <div class="error">@_error</div> }
-        <button class="btn primary" @onclick="SaveAsync"><Icon Name="check" />Guardar</button>
-    </div>
-
-    <div class="card form">
-        <h2>Apariencia</h2>
-        <div class="segmented">
-            <button type="button" class="@(_theme == "dark" ? "on" : "")" @onclick="@(() => SetThemeAsync("dark"))"><Icon Name="moon" /> Oscuro</button>
-            <button type="button" class="@(_theme == "light" ? "on" : "")" @onclick="@(() => SetThemeAsync("light"))"><Icon Name="sun" /> Claro</button>
+        <div class="counters">
+            <a class="counter" href="sesiones"><div class="ring"><Icon Name="calendar" /></div><b>@_s.Sessions</b><span>@L["Sesiones"]</span></a>
+            <div class="counter"><div class="ring"><Icon Name="swords" /></div><b>@_s.Rolls</b><span>@L["Rolls"]</span></div>
+            <a class="counter" href="sumisiones"><div class="ring"><Icon Name="target" /></div><b>@_s.SubmissionsFor</b><span>@L["Sumisiones"]</span></a>
         </div>
     </div>
 
-    <div class="card form">
-        <h2>Copia de seguridad</h2>
-        <p class="small muted" style="margin:0">Los datos viven solo en este navegador. Exporta un JSON de vez en cuando o para pasarlos a otro dispositivo.</p>
-        <button class="btn" @onclick="ExportAsync"><Icon Name="download" />Exportar JSON</button>
-        <label class="btn" style="cursor:pointer"><Icon Name="upload" />Importar JSON
-            <InputFile OnChange="OnFileAsync" accept=".json,application/json" style="display:none" />
-        </label>
-
-        @if (_preview is not null)
-        {
-            <div class="sub-card">
-                <strong>Revisa antes de importar</strong>
-                <div class="stat-line">
-                    <span><strong>@_preview.Sessions</strong> sesiones</span>
-                    <span><strong>@_preview.Techniques</strong> técnicas</span>
-                    <span><strong>@_preview.Positions</strong> posiciones</span>
-                </div>
-                @if (_preview.DuplicateTechniques + _preview.DuplicateSessions > 0)
-                {
-                    <div class="small" style="color:var(--warn)">Duplicados: @_preview.DuplicateTechniques técnicas y @_preview.DuplicateSessions sesiones ya existen. Al fusionar no se repiten.</div>
-                }
-                <div class="form-actions">
-                    <button class="btn primary" @onclick="() => ImportAsync(ImportMode.Merge)">Fusionar</button>
-                    <button class="btn danger" @onclick="() => ImportAsync(ImportMode.Replace)">Reemplazar todo</button>
-                    <button class="btn ghost" @onclick="() => { _preview = null; _json = null; }">Cancelar</button>
-                </div>
-            </div>
-        }
-    </div>
-
-    <div class="card">
-        <h2>Acerca de</h2>
-        <p class="small muted" style="margin:0">BJJ Journal · Trabajo final de C# · .NET 10 + Blazor WebAssembly. Funciona sin conexión y se puede instalar en el móvil («Añadir a pantalla de inicio») y en el ordenador.</p>
+    <div class="radar-pair">
+        <a class="card" href="sumisiones" style="color:inherit">
+            <h2>@L["Sumisiones"]</h2>
+            <RadarChart Axes="@SubmissionAxes" Color="#f87171" AriaLabel="@L["Sumisiones"]" />
+        </a>
+        <div class="card">
+            <h2>@L["Sesiones"]</h2>
+            <RadarChart Axes="@SessionAxes" Color="#38bdf8" AriaLabel="@L["Sesiones"]" />
+        </div>
     </div>
 </div>
 
 @code {
     private ProfileInput? _p;
-    private ProfileInput _saved = new();
-    private string _theme = "dark";
-    private string? _error;
-    private ImportPreview? _preview;
-    private string? _json;
+    private ProfileSummary? _s;
 
-    private bool _confirmSignOut;
+    private string Initial => string.IsNullOrWhiteSpace(_p?.DisplayName) ? "?" : _p.DisplayName.Trim()[..1].ToUpperInvariant();
 
-    private async Task SyncNowAsync()
-    {
-        var result = await Sync.SyncAsync();
-        Toasts.Show(result.IsSuccess ? "Sincronizado" : result.Error!);
-    }
+    private IReadOnlyList<RadarChart.Axis> SubmissionAxes => _s!.TopSubmissions.Select(x => new RadarChart.Axis(x.Name, x.Count)).ToList();
 
-    private async Task SignOutAsync()
-    {
-        if (!_confirmSignOut)
-        {
-            _confirmSignOut = true;
-            return;
-        }
-
-        await Sync.SyncAsync();
-        await Auth.SignOutAsync();
-        await Sync.ClearLocalAsync();
-        Nav.NavigateTo("acceso", forceLoad: true);
-    }
-
-    private string Initial => string.IsNullOrWhiteSpace(_saved.DisplayName) ? "?" : _saved.DisplayName.Trim()[..1].ToUpperInvariant();
+    private IReadOnlyList<RadarChart.Axis> SessionAxes =>
+    [
+        new(L["Gi"], _s!.Mix.Gi),
+        new(L["Clase"], _s.Mix.Class),
+        new(L["Open mat"], _s.Mix.OpenMat),
+        new(L["No-gi"], _s.Mix.NoGi),
+        new(L["Drilling"], _s.Mix.Drilling),
+        new(L["Competición"], _s.Mix.Competition),
+    ];
 
     protected override async Task OnInitializedAsync()
     {
         _p = await Profiles.GetAsync() ?? new ProfileInput();
-        _saved = await Profiles.GetAsync() ?? new ProfileInput();
-        _theme = await JS.InvokeAsync<string>("bjjTheme.get");
+        _s = await Stats.GetProfileSummaryAsync();
     }
 
-    private async Task SaveAsync()
-    {
-        var result = await Profiles.SaveAsync(_p!);
-        _error = result.Error;
-        if (result.IsSuccess)
-        {
-            _saved = (await Profiles.GetAsync())!;
-            Toasts.Show("Perfil guardado");
-        }
-    }
+    private static string Pct(double v) => (Math.Clamp(v, 0, 1) * 100).ToString("0.#", CultureInfo.InvariantCulture) + "%";
 
-    private async Task SetThemeAsync(string theme)
+    private string Since(DateOnly since)
     {
-        _theme = theme;
-        await JS.InvokeVoidAsync("bjjTheme.set", theme);
-    }
-
-    private async Task ExportAsync()
-    {
-        var json = await Backup.ExportJsonAsync();
-        await JS.InvokeVoidAsync("bjjFiles.download", $"bjj-journal-{DateTime.Now:yyyy-MM-dd}.json", "application/json", json);
-        Toasts.Show("Copia exportada");
-    }
-
-    private async Task OnFileAsync(InputFileChangeEventArgs e)
-    {
-        using var reader = new StreamReader(e.File.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024));
-        _json = await reader.ReadToEndAsync();
-        var result = await Backup.PreviewAsync(_json);
-        if (!result.IsSuccess)
-        {
-            Toasts.Show(result.Error!);
-            _json = null;
-            return;
-        }
-
-        _preview = result.Value;
-    }
-
-    private async Task ImportAsync(ImportMode mode)
-    {
-        var result = await Backup.ImportAsync(_json!, mode);
-        _preview = null;
-        _json = null;
-        Toasts.Show(result.IsSuccess ? "Datos importados" : result.Error!);
-        if (result.IsSuccess)
-        {
-            Nav.NavigateTo("./");
-        }
+        var months = ((DateTime.Today.Year - since.Year) * 12) + DateTime.Today.Month - since.Month;
+        return months < 12 ? L.N(Math.Max(months, 0), "mes", "meses") : L.N(months / 12, "año", "años");
     }
 }

@@ -2,21 +2,21 @@
 @inject SessionService SessionsSvc
 @inject NavigationManager Nav
 
-<PageTitle>Sesión · BJJ Journal</PageTitle>
+<PageTitle>@L["Sesión"] · BJJ Journal</PageTitle>
 
 @if (_s is null)
 {
-    @if (_loaded) { <div class="card empty">Esta sesión no existe. <a href="sesiones">Ver sesiones</a></div> }
+    @if (_loaded) { <div class="card empty">@L["Esta sesión no existe."] <a href="sesiones">@L["Ver sesiones"]</a></div> }
     return;
 }
 
 <div class="view narrow">
     <div class="view-head">
         <div class="back-row">
-            <a class="round-btn" aria-label="Volver" href="sesiones"><Icon Name="left" /></a>
+            <a class="round-btn" aria-label="@L["Volver"]" href="sesiones"><Icon Name="left" /></a>
             <h1 class="subtitle">@Labels.Of(_s.Type) · @Labels.Of(_s.Attire)</h1>
         </div>
-        <a class="btn small" href="sesiones/@_s.Id/editar"><Icon Name="edit" />Editar</a>
+        <a class="btn small" href="sesiones/@_s.Id/editar"><Icon Name="edit" />@L["Editar"]</a>
     </div>
 
     <div class="card hero">
@@ -24,7 +24,7 @@
         <div class="hero-row">
             <div class="huge">@_s.DurationMinutes<span>min</span></div>
             <div style="text-align:right">
-                <div class="label">Satisfacción</div>
+                <div class="label">@L["Satisfacción"]</div>
                 <div style="font-size:18px"><Stars Value="_s.Satisfaction" /></div>
                 <div class="small muted">@Labels.Satisfaction(_s.Satisfaction)</div>
             </div>
@@ -35,22 +35,22 @@
     @if (_s.Rolls.Count > 0)
     {
         <div class="score">
-            <div><div class="label">Sumisiones a favor</div><div class="n accent">@_s.SubmissionsFor</div></div>
-            <div><div class="label">En contra</div><div class="n danger-text">@_s.SubmissionsAgainst</div></div>
-            <div><div class="label">Rolls</div><div class="n">@_s.Rolls.Count</div></div>
+            <div><div class="label">@L["Sumisiones a favor"]</div><div class="n accent">@_s.SubmissionsFor</div></div>
+            <div><div class="label">@L["En contra"]</div><div class="n danger-text">@_s.SubmissionsAgainst</div></div>
+            <div><div class="label">@L["Rolls"]</div><div class="n">@_s.Rolls.Count</div></div>
         </div>
     }
 
     @if (_s.Notes is not null)
     {
-        <div class="card"><h2>Notas</h2><p class="notes">@_s.Notes</p></div>
+        <div class="card"><h2>@L["Notas"]</h2><p class="notes">@_s.Notes</p></div>
     }
 
     <div class="card list-card">
-        <h2>Técnicas (@_s.Techniques.Count)</h2>
+        <h2>@L["Técnicas"] (@_s.Techniques.Count)</h2>
         @if (_s.Techniques.Count == 0)
         {
-            <div class="empty">No apuntaste técnicas en esta sesión.</div>
+            <div class="empty">@L["No apuntaste técnicas en esta sesión."]</div>
         }
         <div class="list">
             @foreach (var t in _s.Techniques)
@@ -67,7 +67,7 @@
     @if (_s.Rolls.Count > 0)
     {
         <div class="card list-card">
-            <h2>Rolls</h2>
+            <h2>@L["Rolls"]</h2>
             <div class="list">
                 @foreach (var (r, i) in _s.Rolls.Select((r, i) => (r, i)))
                 {
@@ -77,7 +77,7 @@
                             <div class="note">@(r.PartnerName ?? $"Roll {i + 1}") @if (r.PartnerBelt is { } b) { <span class="tag" style="margin-left:4px">@Labels.Of(b)</span> }</div>
                             @if (r.Events.Count == 0)
                             {
-                                <div class="meta">Sin eventos</div>
+                                <div class="meta">@L["Sin eventos"]</div>
                             }
                             @foreach (var e in r.Events)
                             {

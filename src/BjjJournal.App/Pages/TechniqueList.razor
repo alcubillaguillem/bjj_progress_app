@@ -2,24 +2,24 @@
 @inject TechniqueService Techniques
 @inject PositionService Positions
 
-<PageTitle>Técnicas · BJJ Journal</PageTitle>
+<PageTitle>@L["Técnicas"] · BJJ Journal</PageTitle>
 
 <div class="view">
     <div class="view-head">
-        <h1 class="title">Técnicas</h1>
+        <h1 class="title">@L["Técnicas"]</h1>
         <div class="actions">
-            <a class="btn pill" href="cinturon"><Icon Name="belt" />Cinturón</a>
-            <a class="btn primary pill" style="background:var(--accent)" href="tecnicas/nueva"><Icon Name="plus" />Nueva</a>
+            <a class="btn pill" href="cinturon"><Icon Name="belt" />@L["Cinturón"]</a>
+            <a class="btn primary pill" style="background:var(--accent)" href="tecnicas/nueva"><Icon Name="plus" />@L["Nueva"]</a>
         </div>
     </div>
 
     <div class="filters">
         <div class="search-box">
             <Icon Name="search" />
-            <input type="search" placeholder="Nombre, posición, etiqueta o notas…" @bind="_query" @bind:event="oninput" @bind:after="LoadAsync" />
+            <input type="search" placeholder="@L["Nombre, posición, etiqueta o notas…"]" @bind="_query" @bind:event="oninput" @bind:after="LoadAsync" />
         </div>
         <div class="chips scroll">
-            <button class="chip @(_category is null ? "on" : "")" @onclick="() => SetCategory(null)">Todas</button>
+            <button class="chip @(_category is null ? "on" : "")" @onclick="() => SetCategory(null)">@L["Todas"]</button>
             @foreach (var c in Enum.GetValues<TechniqueCategory>())
             {
                 var cat = c;
@@ -27,12 +27,12 @@
             }
         </div>
         <div class="filter-row">
-            <select @bind="_positionId" @bind:after="LoadAsync" aria-label="Posición">
-                <option value="">Todas las posiciones</option>
+            <select @bind="_positionId" @bind:after="LoadAsync" aria-label="@L["Posición"]">
+                <option value="">@L["Todas las posiciones"]</option>
                 @foreach (var p in _positions) { <option value="@p.Id">@p.Name</option> }
             </select>
-            <select @bind="_tag" @bind:after="LoadAsync" aria-label="Etiqueta">
-                <option value="">Todas las etiquetas</option>
+            <select @bind="_tag" @bind:after="LoadAsync" aria-label="@L["Etiqueta"]">
+                <option value="">@L["Todas las etiquetas"]</option>
                 @foreach (var t in _tags) { <option value="@t">#@t</option> }
             </select>
         </div>
@@ -40,11 +40,11 @@
 
     @if (_items is not null)
     {
-        <div class="small muted">@_items.Count @(_items.Count == 1 ? "técnica" : "técnicas")</div>
+        <div class="small muted">@L.N(_items.Count, "técnica", "técnicas")</div>
         <div class="card list-card">
             @if (_items.Count == 0)
             {
-                <div class="empty">No hay técnicas que coincidan. <a href="tecnicas/nueva">Crear una</a></div>
+                <div class="empty">@L["No hay técnicas que coincidan."] <a href="tecnicas/nueva">@L["Crear una"]</a></div>
             }
             <div class="list cols">
                 @foreach (var t in _items)

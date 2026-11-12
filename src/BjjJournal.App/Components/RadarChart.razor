@@ -1,0 +1,57 @@
+@* Gráfico radar (araña) en SVG. Necesita al menos 3 ejes; el máximo marca el borde exterior. *@
+@if (Axes.Count < 3 || Axes.All(a => a.Value <= 0))
+{
+    <div class="empty">@L["Sin datos todavía."]</div>
+}
+else
+{
+    <svg class="radar" viewBox="-140 -96 280 192" role="img" aria-label="@AriaLabel">
+        @for (var ring = 1; ring <= Rings; ring++)
+        {
+            <polygon points="@Polygon(_ => (double)ring / Rings)" class="radar-ring" />
+        }
+        @for (var i = 0; i < Axes.Count; i++)
+        {
+            var (x, y) = Point(i, 1);
+            <line x1="0" y1="0" x2="@F(x)" y2="@F(y)" class="radar-ring" />
+        }
+        <polygon points="@Polygon(i => Axes[i].Value / Max)" fill="@Color" fill-opacity=".22" stroke="@Color" stroke-width="1.6" stroke-linejoin="round" />
+        @for (var i = 0; i < Axes.Count; i++)
+        {
+            var (x, y) = Point(i, Axes[i].Value / Max);
+            <circle cx="@F(x)" cy="@F(y)" r="2.4" fill="@Color"><title>@Axes[i].Label: @Axes[i].Value</title></circle>
+        }
+        @for (var i = 0; i < Axes.Count; i++)
+        {
+            var (x, y) = Point(i, 1.16);
+            var anchor = Math.Abs(x) < 8 ? "middle" : x > 0 ? "start" : "end";
+            <g><text x="@F(x)" y="@F(y + 3)" text-anchor="@anchor" class="radar-label">@Short(Axes[i].Label)</text></g>
+        }
+    </svg>
+}
+
+@code {
+    public sealed record Axis(string Label, double Value);
+
+    private const int Rings = 4;
+    private const double Radius = 66;
+
+    [Parameter, EditorRequired] public IReadOnlyList<Axis> Axes { get; set; } = [];
+    [Parameter] public string Color { get; set; } = "var(--accent)";
+    [Parameter] public string AriaLabel { get; set; } = "Radar";
+
+    private double Max => Math.Max(1, Axes.Max(a => a.Value));
+
+    private (double X, double Y) Point(int i, double r)
+    {
+        var angle = (-Math.PI / 2) + (2 * Math.PI * i / Axes.Count);
+        return (Math.Cos(angle) * Radius * r, Math.Sin(angle) * Radius * r);
+    }
+
+    private string Polygon(Func<int, double> radius) =>
+        string.Join(' ', Enumerable.Range(0, Axes.Count).Select(i => Point(i, radius(i))).Select(p => $"{F(p.X)},{F(p.Y)}"));
+
+    private static string Short(string s) => s.Length <= 12 ? s : s[..11].TrimEnd() + "…";
+
+    private static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
+}

@@ -2,20 +2,20 @@
 @inject TechniqueService Techniques
 @inject ProfileService Profiles
 
-<PageTitle>Cinturón · BJJ Journal</PageTitle>
+<PageTitle>@L["Cinturón"] · BJJ Journal</PageTitle>
 
 <div class="view">
     <div class="view-head">
         <div>
-            <div class="label">Checklist por cinturón</div>
-            <h1 class="title">Cinturón</h1>
+            <div class="label">@L["Checklist por cinturón"]</div>
+            <h1 class="title">@L["Cinturón"]</h1>
         </div>
-        <a class="btn pill" href="tecnicas/nueva"><Icon Name="plus" />Técnica</a>
+        <a class="btn pill" href="tecnicas/nueva"><Icon Name="plus" />@L["Técnica"]</a>
     </div>
 
     @if (_progress.Count == 0)
     {
-        <div class="card empty">Ninguna técnica tiene temario de cinturón. Edita una técnica y elige «Temario de cinturón».</div>
+        <div class="card empty">@L["Ninguna técnica tiene temario de cinturón. Edita una técnica y elige «Temario de cinturón»."]</div>
     }
     else
     {
@@ -29,13 +29,13 @@
                         <span class="kpi-num" style="margin:0; font-size:22px">@p.Percent.ToString("0")%</span>
                     </div>
                     <div class="bar"><div class="fill" style="width:@p.Percent.ToString("0.#", CultureInfo.InvariantCulture)%"></div></div>
-                    <div class="small muted" style="margin-top:8px">@p.CompetentOrMastered de @p.Total competentes o dominadas</div>
+                    <div class="small muted" style="margin-top:8px">@L.F("{0} de {1} competentes o dominadas", p.CompetentOrMastered, p.Total)</div>
                 </button>
             }
         </div>
 
         <div class="chips">
-            <button class="chip @(_status is null ? "on" : "")" @onclick="() => _status = null">Todas</button>
+            <button class="chip @(_status is null ? "on" : "")" @onclick="() => _status = null">@L["Todas"]</button>
             @foreach (var s in Enum.GetValues<ProgressStatus>())
             {
                 var st = s;
@@ -44,7 +44,7 @@
         </div>
 
         <div class="card list-card">
-            <h2>Temario @Labels.Of(_belt).ToLowerInvariant()</h2>
+            <h2>@L.F("Temario {0}", Labels.Of(_belt).ToLowerInvariant())</h2>
             <div class="list">
                 @foreach (var group in _items.Where(i => _status is null || i.Progress == _status).GroupBy(i => i.Category).OrderBy(g => g.Key))
                 {
@@ -56,9 +56,9 @@
                             <span class="cat-ic" style="color:@(item.Progress >= ProgressStatus.Competent ? "var(--accent)" : "var(--muted)")"><Icon Name="@(item.Progress >= ProgressStatus.Competent ? "check" : "target")" /></span>
                             <a class="info" href="tecnicas/@item.Id" style="color:inherit">
                                 <div class="note">@item.Name</div>
-                                <div class="meta">@(item.PositionName ?? "Sin posición") · trabajada @item.TimesWorked @(item.TimesWorked == 1 ? "vez" : "veces")</div>
+                                <div class="meta">@(item.PositionName ?? L["Sin posición"]) · @L["trabajada"] @L.N(item.TimesWorked, "vez", "veces")</div>
                             </a>
-                            <select class="progress-select" value="@item.Progress" aria-label="Progreso de @item.Name"
+                            <select class="progress-select" value="@item.Progress" aria-label="@L["Progreso"] · @item.Name"
                                     @onchange="e => SetAsync(item.Id, e.Value)">
                                 @foreach (var s in Enum.GetValues<ProgressStatus>()) { <option value="@s">@Labels.Of(s)</option> }
                             </select>

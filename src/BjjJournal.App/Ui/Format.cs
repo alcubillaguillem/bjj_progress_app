@@ -7,16 +7,17 @@ public static class Format
 
     public static string Day(DateTimeOffset utc) => Local(utc).ToString("ddd d MMM");
 
-    public static string DayLong(DateTimeOffset utc) => Local(utc).ToString("dddd, d 'de' MMMM 'de' yyyy · HH:mm");
+    public static string DayLong(DateTimeOffset utc) =>
+        Local(utc).ToString(Loc.Current.IsEnglish ? "dddd, d MMMM yyyy · HH:mm" : "dddd, d 'de' MMMM 'de' yyyy · HH:mm");
 
     public static string Relative(DateTimeOffset utc)
     {
         var days = (DateTime.Today - Local(utc).Date).Days;
         return days switch
         {
-            0 => "hoy",
-            1 => "ayer",
-            < 7 and > 1 => $"hace {days} días",
+            0 => Loc.Current["hoy"],
+            1 => Loc.Current["ayer"],
+            < 7 and > 1 => Loc.Current.F("hace {0} días", days),
             _ => Local(utc).ToString("d MMM yyyy"),
         };
     }

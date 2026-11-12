@@ -2,7 +2,7 @@
 @inject StatsService Stats
 @inject ProfileService Profiles
 
-<PageTitle>Inicio · BJJ Journal</PageTitle>
+<PageTitle>@L["Inicio"] · BJJ Journal</PageTitle>
 
 @if (_d is null)
 {
@@ -12,92 +12,92 @@
 <div class="view">
     <div class="view-head">
         <div>
-            <div class="label">Hola, @_name</div>
-            <h1 class="title">Inicio</h1>
+            <div class="label">@L.F("Hola, {0}", _name)</div>
+            <h1 class="title">@L["Inicio"]</h1>
         </div>
-        <a class="btn pill" href="sesiones/nueva"><Icon Name="plus" />Sesión</a>
+        <a class="btn pill" href="sesiones/nueva"><Icon Name="plus" />@L["Sesión"]</a>
     </div>
 
     <div class="grid-2">
         <div class="card hero">
-            <div class="label">Racha actual</div>
+            <div class="label">@L["Racha actual"]</div>
             <div class="hero-row">
-                <div class="huge">@_d.CurrentStreakWeeks<span>@(_d.CurrentStreakWeeks == 1 ? "semana" : "semanas")</span></div>
+                <div class="huge">@_d.CurrentStreakWeeks<span>@L[_d.CurrentStreakWeeks == 1 ? "semana" : "semanas"]</span></div>
                 <span class="accent"><Icon Name="flame" /></span>
             </div>
             <div class="small muted">
                 @if (_d.SessionsThisWeek == 0 && _d.CurrentStreakWeeks > 0)
                 {
-                    <text>Entrena esta semana para no perder la racha.</text>
+                    @L["Entrena esta semana para no perder la racha."]
                 }
                 else if (_d.CurrentStreakWeeks == 0)
                 {
-                    <text>Semanas seguidas con al menos una sesión.</text>
+                    @L["Semanas seguidas con al menos una sesión."]
                 }
                 else
                 {
-                    <text>Esta semana ya has entrenado. Sigue así.</text>
+                    @L["Esta semana ya has entrenado. Sigue así."]
                 }
             </div>
         </div>
         <div class="kpi-grid">
-            <div class="kpi"><div class="label">Esta semana</div><div class="kpi-num">@_d.SessionsThisWeek<small>ses.</small></div></div>
-            <div class="kpi"><div class="label">Horas semana</div><div class="kpi-num">@Format.Hours(_d.HoursThisWeek)<small>h</small></div></div>
-            <div class="kpi"><div class="label">Total sesiones</div><div class="kpi-num">@_d.TotalSessions</div></div>
-            <div class="kpi"><div class="label">Horas en el tapiz</div><div class="kpi-num">@Format.Hours(_d.TotalHours)<small>h</small></div></div>
+            <div class="kpi"><div class="label">@L["Esta semana"]</div><div class="kpi-num">@_d.SessionsThisWeek<small>@L["ses."]</small></div></div>
+            <div class="kpi"><div class="label">@L["Horas semana"]</div><div class="kpi-num">@Format.Hours(_d.HoursThisWeek)<small>h</small></div></div>
+            <div class="kpi"><div class="label">@L["Total sesiones"]</div><div class="kpi-num">@_d.TotalSessions</div></div>
+            <div class="kpi"><div class="label">@L["Horas en el tapiz"]</div><div class="kpi-num">@Format.Hours(_d.TotalHours)<small>h</small></div></div>
         </div>
     </div>
 
     @if (_d.LastSession is { } last)
     {
         <div class="card list-card">
-            <h2>Última sesión · @Format.Relative(last.StartedAt)</h2>
+            <h2>@L["Última sesión"] · @Format.Relative(last.StartedAt)</h2>
             <div class="list"><SessionRow Session="last" /></div>
         </div>
     }
     else
     {
         <div class="card empty">
-            Aún no has registrado sesiones.<br /><br />
-            <a class="btn primary" href="sesiones/nueva"><Icon Name="plus" />Registrar la primera</a>
+            @L["Aún no has registrado sesiones."]<br /><br />
+            <a class="btn primary" href="sesiones/nueva"><Icon Name="plus" />@L["Registrar la primera"]</a>
         </div>
     }
 
     <div class="grid-2">
         <div class="card">
             <div class="card-head">
-                <h2>Por semana</h2>
+                <h2>@L["Por semana"]</h2>
                 <div class="segmented" style="width:auto">
-                    <button type="button" class="@(_hours ? "" : "on")" @onclick="() => _hours = false">Sesiones</button>
-                    <button type="button" class="@(_hours ? "on" : "")" @onclick="() => _hours = true">Horas</button>
+                    <button type="button" class="@(_hours ? "" : "on")" @onclick="() => _hours = false">@L["Sesiones"]</button>
+                    <button type="button" class="@(_hours ? "on" : "")" @onclick="() => _hours = true">@L["Horas"]</button>
                 </div>
             </div>
             <BarChart Values="@(_d.Weekly.Select(w => _hours ? w.Hours : w.Sessions).ToList())"
                       Labels="@(_d.Weekly.Select(w => Format.WeekLabel(w.WeekStart)).ToList())"
                       ValueLabel="@(v => _hours ? Format.Hours(v) : v.ToString("0"))"
-                      AriaLabel="Sesiones u horas por semana, últimas 12 semanas" />
-            <div class="small muted">Últimas 12 semanas. La barra de la derecha es la semana actual.</div>
+                      AriaLabel="@L["Sesiones u horas por semana, últimas 12 semanas"]" />
+            <div class="small muted">@L["Últimas 12 semanas. La barra de la derecha es la semana actual."]</div>
         </div>
 
         <div class="card">
-            <div class="card-head"><h2>Satisfacción</h2><span class="small muted">media móvil 4 semanas</span></div>
+            <div class="card-head"><h2>@L["Satisfacción"]</h2><span class="small muted">@L["media móvil 4 semanas"]</span></div>
             @if (_d.SatisfactionTrend.All(p => p.Average is null))
             {
-                <div class="empty">Sin datos todavía.</div>
+                <div class="empty">@L["Sin datos todavía."]</div>
             }
             else
             {
                 <LineChart Values="@(_d.SatisfactionTrend.Select(p => p.Average).ToList())"
                            Labels="@(_d.SatisfactionTrend.Select(p => Format.WeekLabel(p.WeekStart)).ToList())"
-                           AriaLabel="Satisfacción media móvil de 4 semanas" />
+                           AriaLabel="@L["Satisfacción media móvil de 4 semanas"]" />
             }
         </div>
 
         <div class="card">
-            <h2>Técnicas más trabajadas</h2>
+            <h2>@L["Técnicas más trabajadas"]</h2>
             @if (_d.TopTechniques.Count == 0)
             {
-                <div class="empty">Añade técnicas a tus sesiones para verlas aquí.</div>
+                <div class="empty">@L["Añade técnicas a tus sesiones para verlas aquí."]</div>
             }
             else
             {
@@ -115,10 +115,10 @@
         </div>
 
         <div class="card">
-            <div class="card-head"><h2>Sumisiones</h2><span class="small"><span class="accent">● a favor</span> <span class="danger-text">● en contra</span></span></div>
+            <div class="card-head"><h2><a href="sumisiones" style="color:inherit">@L["Sumisiones"] <Icon Name="right" /></a></h2><span class="small"><span class="accent">● @L["a favor"]</span> <span class="danger-text">● @L["en contra"]</span></span></div>
             @if (_d.Submissions.Count == 0)
             {
-                <div class="empty">Registra rolls con sumisiones para ver este gráfico.</div>
+                <div class="empty">@L["Registra rolls con sumisiones para ver este gráfico."]</div>
             }
             else
             {
@@ -127,7 +127,7 @@
                     @foreach (var s in _d.Submissions.Take(10))
                     {
                         <div class="hbar-row">
-                            <div class="row-top"><span>@s.Name</span><span class="n"><span class="accent">@s.For</span> · <span class="danger-text">@s.Against</span></span></div>
+                            <div class="row-top"><span>@L[s.Name]</span><span class="n"><span class="accent">@s.For</span> · <span class="danger-text">@s.Against</span></span></div>
                             <div class="duo">
                                 @if (s.For > 0) { <span class="for" style="width:@Pct(s.For, max)"></span> }
                                 @if (s.Against > 0) { <span class="against" style="width:@Pct(s.Against, max)"></span> }
@@ -140,22 +140,22 @@
 
         <div class="card">
             <h2>Gi / No-gi</h2>
-            <DonutChart Slices="@AttireSlices" AriaLabel="Reparto gi y no-gi" />
+            <DonutChart Slices="@AttireSlices" AriaLabel="@L["Reparto gi y no-gi"]" />
         </div>
 
         <div class="card">
-            <h2>Tipo de sesión</h2>
-            <DonutChart Slices="@TypeSlices" AriaLabel="Reparto por tipo de sesión" />
+            <h2>@L["Tipo de sesión"]</h2>
+            <DonutChart Slices="@TypeSlices" AriaLabel="@L["Reparto por tipo de sesión"]" />
         </div>
     </div>
 
     @if (_d.Gaps.Categories.Count > 0 || _d.Gaps.Positions.Count > 0)
     {
         <div class="card">
-            <div class="card-head"><h2><span class="accent"><Icon Name="alert" /></span> Lagunas del juego</h2><span class="small muted">sin trabajar en 30 días</span></div>
+            <div class="card-head"><h2><span class="accent"><Icon Name="alert" /></span> @L["Lagunas del juego"]</h2><span class="small muted">@L["sin trabajar en 30 días"]</span></div>
             @if (_d.Gaps.Categories.Count > 0)
             {
-                <div class="label" style="margin-bottom:6px">Categorías</div>
+                <div class="label" style="margin-bottom:6px">@L["Categorías"]</div>
                 <div class="chips" style="margin-bottom:12px">
                     @foreach (var c in _d.Gaps.Categories)
                     {
@@ -165,7 +165,7 @@
             }
             @if (_d.Gaps.Positions.Count > 0)
             {
-                <div class="label" style="margin-bottom:6px">Posiciones</div>
+                <div class="label" style="margin-bottom:6px">@L["Posiciones"]</div>
                 <div class="chips">
                     @foreach (var p in _d.Gaps.Positions.Take(_allGaps ? int.MaxValue : 12))
                     {
@@ -173,7 +173,7 @@
                     }
                     @if (!_allGaps && _d.Gaps.Positions.Count > 12)
                     {
-                        <button class="chip" @onclick="() => _allGaps = true">+@(_d.Gaps.Positions.Count - 12) más</button>
+                        <button class="chip" @onclick="() => _allGaps = true">+@(_d.Gaps.Positions.Count - 12) @L["más"]</button>
                     }
                 </div>
             }

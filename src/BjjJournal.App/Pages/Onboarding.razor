@@ -3,7 +3,7 @@
 @inject ProfileService Profiles
 @inject NavigationManager Nav
 
-<PageTitle>Bienvenida · BJJ Journal</PageTitle>
+<PageTitle>@L["Bienvenida"] · BJJ Journal</PageTitle>
 
 <div class="onboard">
     <img class="logo" src="icon.svg" alt="" />
@@ -17,19 +17,19 @@
     @switch (_step)
     {
         case 1:
-            <h1>Tu diario de BJJ</h1>
-            <p class="muted">Apunta cada sesión, guarda tus técnicas y mira qué parte de tu juego está floja. Todo se guarda en este dispositivo.</p>
-            <label class="field">¿Cómo te llamas?
-                <input @bind="_profile.DisplayName" @bind:event="oninput" placeholder="Tu nombre" autofocus />
+            <h1>@L["Tu diario de BJJ"]</h1>
+            <p class="muted">@L["Apunta cada sesión, guarda tus técnicas y mira qué parte de tu juego está floja. Todo se guarda en este dispositivo."]</p>
+            <label class="field">@L["¿Cómo te llamas?"]
+                <input @bind="_profile.DisplayName" @bind:event="oninput" placeholder="@L["Tu nombre"]" autofocus />
             </label>
-            <label class="field">Gimnasio (opcional)
-                <input @bind="_profile.GymName" placeholder="Nombre del gimnasio" />
+            <label class="field">@L["Gimnasio (opcional)"]
+                <input @bind="_profile.GymName" placeholder="@L["Nombre del gimnasio"]" />
             </label>
-            <button class="btn primary big-btn" disabled="@string.IsNullOrWhiteSpace(_profile.DisplayName)" @onclick="() => _step = 2">Siguiente</button>
+            <button class="btn primary big-btn" disabled="@string.IsNullOrWhiteSpace(_profile.DisplayName)" @onclick="() => _step = 2">@L["Siguiente"]</button>
             break;
 
         case 2:
-            <h1>Tu cinturón</h1>
+            <h1>@L["Tu cinturón"]</h1>
             <div class="belt-grid">
                 @foreach (var belt in Enum.GetValues<Belt>())
                 {
@@ -38,26 +38,26 @@
                             @onclick="() => _profile.Belt = b">@Labels.Of(b)</button>
                 }
             </div>
-            <div class="field">Grados
+            <div class="field">@L["Grados"]
                 <Segmented TValue="StripeOption" Value="(StripeOption)_profile.Stripes" ValueChanged="v => _profile.Stripes = (int)v" Label="v => ((int)v).ToString()" />
             </div>
             <div class="form-actions">
-                <button class="btn" @onclick="() => _step = 1">Atrás</button>
-                <button class="btn primary" @onclick="() => _step = 3">Siguiente</button>
+                <button class="btn" @onclick="() => _step = 1">@L["Atrás"]</button>
+                <button class="btn primary" @onclick="() => _step = 3">@L["Siguiente"]</button>
             </div>
             break;
 
         default:
-            <h1>¿Cargamos técnicas básicas?</h1>
-            <p class="muted">Incluye unas 40 posiciones y 60 técnicas con el temario de blanco y azul. Puedes editarlas o borrarlas cuando quieras.</p>
+            <h1>@L["¿Cargamos técnicas básicas?"]</h1>
+            <p class="muted">@L["Incluye unas 40 posiciones y 60 técnicas con el temario de blanco y azul. Puedes editarlas o borrarlas cuando quieras."]</p>
             <div class="segmented">
-                <button type="button" class="@(_seed ? "on" : "")" @onclick="() => _seed = true">Sí, cargar</button>
-                <button type="button" class="@(!_seed ? "on" : "")" @onclick="() => _seed = false">Empezar vacío</button>
+                <button type="button" class="@(_seed ? "on" : "")" @onclick="() => _seed = true">@L["Sí, cargar"]</button>
+                <button type="button" class="@(!_seed ? "on" : "")" @onclick="() => _seed = false">@L["Empezar vacío"]</button>
             </div>
-            @if (_error is not null) { <div class="error">@_error</div> }
+            @if (_error is not null) { <div class="error">@L[_error]</div> }
             <div class="form-actions">
-                <button class="btn" @onclick="() => _step = 2">Atrás</button>
-                <button class="btn primary" @onclick="FinishAsync">Empezar</button>
+                <button class="btn" @onclick="() => _step = 2">@L["Atrás"]</button>
+                <button class="btn primary" @onclick="FinishAsync">@L["Empezar"]</button>
             </div>
             break;
     }

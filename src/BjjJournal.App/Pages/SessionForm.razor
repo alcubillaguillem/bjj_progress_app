@@ -6,7 +6,7 @@
 @inject NavigationManager Nav
 @inject ToastService Toasts
 
-<PageTitle>@(Id is null ? "Nueva sesión" : "Editar sesión") · BJJ Journal</PageTitle>
+<PageTitle>@L[Id is null ? "Nueva sesión" : "Editar sesión"] · BJJ Journal</PageTitle>
 
 @if (_input is null)
 {
@@ -15,22 +15,22 @@
 
 <div class="view narrow">
     <div class="back-row">
-        <button class="round-btn" aria-label="Volver" @onclick="Back"><Icon Name="left" /></button>
-        <h1 class="subtitle">@(Id is null ? "Nueva sesión" : "Editar sesión")</h1>
+        <button class="round-btn" aria-label="@L["Volver"]" @onclick="Back"><Icon Name="left" /></button>
+        <h1 class="subtitle">@L[Id is null ? "Nueva sesión" : "Editar sesión"]</h1>
     </div>
 
     <div class="card form">
         <div class="field-row">
-            <label class="field">Fecha y hora<input type="datetime-local" @bind="_local" /></label>
-            <div class="field">Duración (min)
+            <label class="field">@L["Fecha y hora"]<input type="datetime-local" @bind="_local" /></label>
+            <div class="field">@L["Duración (min)"]
                 <div class="stepper">
-                    <button type="button" class="round-btn" aria-label="Menos" @onclick="() => _input.DurationMinutes = Math.Max(5, _input.DurationMinutes - 15)">–</button>
+                    <button type="button" class="round-btn" aria-label="@L["Menos"]" @onclick="() => _input.DurationMinutes = Math.Max(5, _input.DurationMinutes - 15)">–</button>
                     <input type="number" inputmode="numeric" min="1" @bind="_input.DurationMinutes" />
-                    <button type="button" class="round-btn" aria-label="Más" @onclick="() => _input.DurationMinutes += 15">+</button>
+                    <button type="button" class="round-btn" aria-label="@L["Más"]" @onclick="() => _input.DurationMinutes += 15">+</button>
                 </div>
             </div>
         </div>
-        <div class="field">Tipo
+        <div class="field">@L["Tipo"]
             <div class="chips">
                 @foreach (var t in Enum.GetValues<SessionType>())
                 {
@@ -39,22 +39,22 @@
                 }
             </div>
         </div>
-        <div class="field">Gi / No-gi
+        <div class="field">@L["Gi / No-gi"]
             <Segmented TValue="Attire" @bind-Value="_input.Attire" Label="Labels.Of" />
         </div>
-        <button type="button" class="btn primary big-btn" @onclick="SaveAsync"><Icon Name="check" />Guardar sesión</button>
-        <div class="small muted">Con esto basta. Lo de abajo es opcional.</div>
+        <button type="button" class="btn primary big-btn" @onclick="SaveAsync"><Icon Name="check" />@L["Guardar sesión"]</button>
+        <div class="small muted">@L["Con esto basta. Lo de abajo es opcional."]</div>
     </div>
 
     <div class="card form">
-        <h2>Cómo fue</h2>
+        <h2>@L["Cómo fue"]</h2>
         <SatisfactionPicker @bind-Value="_input.Satisfaction" />
-        <label class="field">Lugar<input @bind="_input.Location" placeholder="Gimnasio, open mat…" /></label>
-        <label class="field">Notas<textarea @bind="_input.Notes" placeholder="Qué aprendiste, qué falló, detalles que no quieres olvidar…"></textarea></label>
+        <label class="field">@L["Lugar"]<input @bind="_input.Location" placeholder="@L["Gimnasio, open mat…"]" /></label>
+        <label class="field">@L["Notas"]<textarea @bind="_input.Notes" placeholder="@L["Qué aprendiste, qué falló, detalles que no quieres olvidar…"]"></textarea></label>
     </div>
 
     <div class="card form">
-        <div class="card-head"><h2>Técnicas trabajadas</h2><span class="small muted">@_input.Techniques.Count</span></div>
+        <div class="card-head"><h2>@L["Técnicas trabajadas"]</h2><span class="small muted">@_input.Techniques.Count</span></div>
         @if (_input.Techniques.Count > 0)
         {
             <div class="picked">
@@ -64,10 +64,10 @@
                     <div class="picked-row">
                         <span class="dot" style="background:@Color(item.TechniqueId)"></span>
                         <span class="name">@Name(item.TechniqueId)</span>
-                        <select @bind="item.Focus" aria-label="Foco">
+                        <select @bind="item.Focus" aria-label="@L["Foco"]">
                             @foreach (var f in Enum.GetValues<TechniqueFocus>()) { <option value="@f">@Labels.Of(f)</option> }
                         </select>
-                        <button type="button" class="icon-btn" aria-label="Quitar" @onclick="() => _input.Techniques.Remove(item)"><Icon Name="x" /></button>
+                        <button type="button" class="icon-btn" aria-label="@L["Quitar"]" @onclick="() => _input.Techniques.Remove(item)"><Icon Name="x" /></button>
                     </div>
                 }
             </div>
@@ -76,61 +76,61 @@
     </div>
 
     <div class="card form">
-        <div class="card-head"><h2>Rolls</h2><span class="small muted">@SubsFor a favor · @SubsAgainst en contra</span></div>
+        <div class="card-head"><h2>@L["Rolls"]</h2><span class="small muted">@SubsFor @L["a favor"] · @SubsAgainst @L["en contra"]</span></div>
         @for (var r = 0; r < _input.Rolls.Count; r++)
         {
             var roll = _input.Rolls[r];
             var n = r + 1;
             <div class="sub-card">
                 <div class="roll-head">
-                    <strong>Roll @n</strong>
-                    <button type="button" class="icon-btn" aria-label="Quitar roll" @onclick="() => _input.Rolls.Remove(roll)"><Icon Name="trash" /></button>
+                    <strong>@L["Roll"] @n</strong>
+                    <button type="button" class="icon-btn" aria-label="@L["Quitar roll"]" @onclick="() => _input.Rolls.Remove(roll)"><Icon Name="trash" /></button>
                 </div>
                 <div class="field-row">
-                    <label class="field">Compañero<input @bind="roll.PartnerName" placeholder="Nombre" /></label>
-                    <label class="field">Cinturón
+                    <label class="field">@L["Compañero"]<input @bind="roll.PartnerName" placeholder="@L["Nombre"]" /></label>
+                    <label class="field">@L["Cinturón"]
                         <select @bind="roll.PartnerBelt">
                             <option value="">—</option>
                             @foreach (var b in Enum.GetValues<Belt>()) { <option value="@b">@Labels.Of(b)</option> }
                         </select>
                     </label>
-                    <label class="field">Minutos<input type="number" inputmode="numeric" min="1" @bind="roll.DurationMinutes" /></label>
+                    <label class="field">@L["Minutos"]<input type="number" inputmode="numeric" min="1" @bind="roll.DurationMinutes" /></label>
                 </div>
                 @foreach (var ev in roll.Events)
                 {
                     var e = ev;
                     <div class="event-row">
-                        <select class="ev-kind" @bind="e.Kind" aria-label="Evento">
+                        <select class="ev-kind" @bind="e.Kind" aria-label="@L["Evento"]">
                             @foreach (var k in Enum.GetValues<RollEventKind>()) { <option value="@k">@Labels.Of(k)</option> }
                         </select>
-                        <button type="button" class="icon-btn ev-del" aria-label="Quitar evento" @onclick="() => roll.Events.Remove(e)"><Icon Name="x" /></button>
-                        <select class="ev-tech" @bind="e.TechniqueId" aria-label="Técnica">
-                            <option value="">Técnica…</option>
+                        <button type="button" class="icon-btn ev-del" aria-label="@L["Quitar evento"]" @onclick="() => roll.Events.Remove(e)"><Icon Name="x" /></button>
+                        <select class="ev-tech" @bind="e.TechniqueId" aria-label="@L["Técnica"]">
+                            <option value="">@L["Técnica…"]</option>
                             @foreach (var t in _techniques) { <option value="@t.Id">@t.Name</option> }
                         </select>
-                        <select class="ev-pos" @bind="e.PositionId" aria-label="Posición">
-                            <option value="">Posición…</option>
+                        <select class="ev-pos" @bind="e.PositionId" aria-label="@L["Posición"]">
+                            <option value="">@L["Posición…"]</option>
                             @foreach (var p in _positions) { <option value="@p.Id">@p.Name</option> }
                         </select>
                     </div>
                 }
                 <div class="chips">
-                    <button type="button" class="chip" @onclick="() => roll.Events.Add(new RollEventInput { Kind = RollEventKind.SubmissionFor })"><Icon Name="plus" />Sumisión a favor</button>
-                    <button type="button" class="chip" @onclick="() => roll.Events.Add(new RollEventInput { Kind = RollEventKind.SubmissionAgainst })"><Icon Name="plus" />En contra</button>
-                    <button type="button" class="chip" @onclick="() => roll.Events.Add(new RollEventInput { Kind = RollEventKind.SweepFor })"><Icon Name="plus" />Otro evento</button>
+                    <button type="button" class="chip" @onclick="() => roll.Events.Add(new RollEventInput { Kind = RollEventKind.SubmissionFor })"><Icon Name="plus" />@L["Sumisión a favor"]</button>
+                    <button type="button" class="chip" @onclick="() => roll.Events.Add(new RollEventInput { Kind = RollEventKind.SubmissionAgainst })"><Icon Name="plus" />@L["En contra"]</button>
+                    <button type="button" class="chip" @onclick="() => roll.Events.Add(new RollEventInput { Kind = RollEventKind.SweepFor })"><Icon Name="plus" />@L["Otro evento"]</button>
                 </div>
             </div>
         }
-        <button type="button" class="btn" @onclick="AddRoll"><Icon Name="plus" />Añadir roll</button>
+        <button type="button" class="btn" @onclick="AddRoll"><Icon Name="plus" />@L["Añadir roll"]</button>
     </div>
 
-    @if (_error is not null) { <div class="error">@_error</div> }
+    @if (_error is not null) { <div class="error">@L[_error]</div> }
     <div class="form-actions">
         @if (Id is not null)
         {
-            <button type="button" class="btn danger" @onclick="DeleteAsync"><Icon Name="trash" />Borrar</button>
+            <button type="button" class="btn danger" @onclick="DeleteAsync"><Icon Name="trash" />@L["Borrar"]</button>
         }
-        <button type="button" class="btn primary big-btn" @onclick="SaveAsync"><Icon Name="check" />Guardar sesión</button>
+        <button type="button" class="btn primary big-btn" @onclick="SaveAsync"><Icon Name="check" />@L["Guardar sesión"]</button>
     </div>
 </div>
 
@@ -163,7 +163,7 @@
 
     private async Task LoadTechniquesAsync() => _techniques = await Techniques.SearchAsync(new TechniqueFilter());
 
-    private string Name(Guid id) => _techniques.FirstOrDefault(t => t.Id == id)?.Name ?? "Técnica borrada";
+    private string Name(Guid id) => _techniques.FirstOrDefault(t => t.Id == id)?.Name ?? L["Técnica borrada"];
 
     private string Color(Guid id) =>
         _techniques.FirstOrDefault(t => t.Id == id) is { } t ? Labels.CategoryColor(t.Category) : "var(--muted)";
@@ -194,7 +194,7 @@
                 return;
             }
 
-            Toasts.Show("Sesión actualizada");
+            Toasts.Show(L["Sesión actualizada"]);
             Nav.NavigateTo($"sesiones/{id}", replace: true);
         }
         else
@@ -206,7 +206,7 @@
                 return;
             }
 
-            Toasts.Show("Sesión guardada");
+            Toasts.Show(L["Sesión guardada"]);
             Nav.NavigateTo($"sesiones/{result.Value}", replace: true);
         }
     }
@@ -216,12 +216,12 @@
         if (!_confirmDelete)
         {
             _confirmDelete = true;
-            _error = "Pulsa «Borrar» otra vez para confirmar.";
+            _error = L["Pulsa «Borrar» otra vez para confirmar."];
             return;
         }
 
         await SessionsSvc.DeleteAsync(Id!.Value);
-        Toasts.Show("Sesión borrada");
+        Toasts.Show(L["Sesión borrada"]);
         Nav.NavigateTo("sesiones", replace: true);
     }
 

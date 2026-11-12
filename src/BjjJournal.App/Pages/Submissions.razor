@@ -1,0 +1,119 @@
+@page "/sumisiones"
+@inject StatsService Stats
+
+<PageTitle>@L["Sumisiones"] · BJJ Journal</PageTitle>
+
+<div class="view narrow">
+    <div class="back-row">
+        <a class="round-btn" aria-label="@L["Volver"]" href="perfil"><Icon Name="left" /></a>
+        <h1 class="subtitle">@L["Sumisiones"]</h1>
+    </div>
+
+    <div class="segmented">
+        <button type="button" class="@(_kind == RollEventKind.SubmissionFor ? "on" : "")" @onclick="() => SetKindAsync(RollEventKind.SubmissionFor)">@L["A favor"]</button>
+        <button type="button" class="@(_kind == RollEventKind.SubmissionAgainst ? "on" : "")" @onclick="() => SetKindAsync(RollEventKind.SubmissionAgainst)">@L["En contra"]</button>
+    </div>
+
+    <div class="card">
+        <div class="month-nav">
+            <button class="round-btn" aria-label="@L["Mes anterior"]" disabled="@_allTime" @onclick="() => MoveAsync(-1)"><Icon Name="left" /></button>
+            <button class="btn ghost small" @onclick="ToggleAllTimeAsync" title="@L["Cambiar entre mes y todo el histórico"]">
+                <strong>@(_allTime ? L["Todo el histórico"] : _month.ToString("MMMM yyyy"))</strong>
+            </button>
+            <button class="round-btn" aria-label="@L["Mes siguiente"]" disabled="@(_allTime || _month >= ThisMonth)" @onclick="() => MoveAsync(1)"><Icon Name="right" /></button>
+        </div>
+
+        @if (_data is not null)
+        {
+            <RadarChart Axes="@Axes" Color="@(_kind == RollEventKind.SubmissionFor ? "#f87171" : "#94a3b8")" AriaLabel="@L["Sumisiones"]" />
+
+            <div class="summary-line" style="margin:12px 0">
+                <span><b>@_data.Total</b> @L["total"] · <b>@_data.Unique</b> @L["distintas"]</span>
+                <label class="chip @(_withPositions ? "on" : "")" style="cursor:pointer">
+                    <input type="checkbox" checked="@_withPositions" @onchange="TogglePositionsAsync" style="display:none" />
+                    <Icon Name="pin" />@L["Con posiciones"]
+                </label>
+            </div>
+
+            @if (_data.Items.Count == 0)
+            {
+                <div class="empty">@L["No hay sumisiones en este periodo."]</div>
+            }
+            else
+            {
+                <div class="rank">
+                    @foreach (var item in _data.Items)
+                    {
+                        <div class="rank-row">
+                            <div class="name">@L[item.Name]@if (item.Position is not null) { <span class="tag">@item.Position</span> }</div>
+                            <div class="count">@item.Count</div>
+                            <div class="bar"><div class="fill" style="width:@Pct(item.Share); background:@(_kind == RollEventKind.SubmissionFor ? "#f87171" : "#94a3b8")"></div></div>
+                            <div class="pct">@((item.Share * 100).ToString("0.#"))%</div>
+                        </div>
+                    }
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private static DateOnly ThisMonth => new(DateTime.Today.Year, DateTime.Today.Month, 1);
+
+    private DateOnly _month = ThisMonth;
+    private bool _allTime;
+    private bool _withPositions;
+    private RollEventKind _kind = RollEventKind.SubmissionFor;
+    private SubmissionBreakdown? _data;
+
+    private IReadOnlyList<RadarChart.Axis> Axes =>
+        _data!.Items.Take(StatsService.RadarAxes)
+            .Select(i => new RadarChart.Axis(i.Position is null ? L[i.Name] : $"{L[i.Name]} · {i.Position}", i.Count))
+            .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+
+        // Si el mes actual está vacío, abre el último mes con sumisiones.
+        if (_data!.Total == 0 && (await Stats.GetSubmissionsAsync(null, null, _kind)).Total > 0)
+        {
+            for (var i = 0; i < 24 && _data.Total == 0; i++)
+            {
+                _month = _month.AddMonths(-1);
+                await LoadAsync();
+            }
+        }
+    }
+
+    private async Task LoadAsync() =>
+        _data = _allTime
+            ? await Stats.GetSubmissionsAsync(null, null, _kind, _withPositions)
+            : await Stats.GetSubmissionsAsync(_month.Year, _month.Month, _kind, _withPositions);
+
+    private async Task MoveAsync(int months)
+    {
+        _month = _month.AddMonths(months);
+        await LoadAsync();
+    }
+
+    private async Task ToggleAllTimeAsync()
+    {
+        _allTime = !_allTime;
+        await LoadAsync();
+    }
+
+    private async Task TogglePositionsAsync()
+    {
+        _withPositions = !_withPositions;
+        await LoadAsync();
+    }
+
+    private async Task SetKindAsync(RollEventKind kind)
+    {
+        _kind = kind;
+        await LoadAsync();
+    }
+
+    private static string Pct(double v) => (Math.Clamp(v, 0, 1) * 100).ToString("0.#", CultureInfo.InvariantCulture) + "%";
+}

@@ -1,14 +1,14 @@
 @page "/sesiones"
 @inject SessionService SessionsSvc
 
-<PageTitle>Sesiones · BJJ Journal</PageTitle>
+<PageTitle>@L["Sesiones"] · BJJ Journal</PageTitle>
 
 <div class="view">
     <div class="view-head">
-        <h1 class="title">Sesiones</h1>
+        <h1 class="title">@L["Sesiones"]</h1>
         <div class="actions">
-            <button class="btn pill @(_showFilters ? "on" : "")" @onclick="() => _showFilters = !_showFilters"><Icon Name="search" />Filtros@(ActiveFilters > 0 ? $" ({ActiveFilters})" : "")</button>
-            <a class="btn primary pill" style="background:var(--accent)" href="sesiones/nueva"><Icon Name="plus" />Nueva</a>
+            <button class="btn pill @(_showFilters ? "on" : "")" @onclick="() => _showFilters = !_showFilters"><Icon Name="search" />@L["Filtros"]@(ActiveFilters > 0 ? $" ({ActiveFilters})" : "")</button>
+            <a class="btn primary pill" style="background:var(--accent)" href="sesiones/nueva"><Icon Name="plus" />@L["Nueva"]</a>
         </div>
     </div>
 
@@ -16,41 +16,41 @@
     {
         <div class="card filters">
             <div class="filter-row">
-                <label class="field">Desde<input type="date" @bind="_from" @bind:after="LoadAsync" /></label>
-                <label class="field">Hasta<input type="date" @bind="_to" @bind:after="LoadAsync" /></label>
-                <label class="field">Tipo
+                <label class="field">@L["Desde"]<input type="date" @bind="_from" @bind:after="LoadAsync" /></label>
+                <label class="field">@L["Hasta"]<input type="date" @bind="_to" @bind:after="LoadAsync" /></label>
+                <label class="field">@L["Tipo"]
                     <select @bind="_type" @bind:after="LoadAsync">
-                        <option value="">Todos</option>
+                        <option value="">@L["Todos"]</option>
                         @foreach (var t in Enum.GetValues<SessionType>()) { <option value="@t">@Labels.Of(t)</option> }
                     </select>
                 </label>
                 <label class="field">Gi / No-gi
                     <select @bind="_attire" @bind:after="LoadAsync">
-                        <option value="">Ambos</option>
+                        <option value="">@L["Ambos"]</option>
                         @foreach (var a in Enum.GetValues<Attire>()) { <option value="@a">@Labels.Of(a)</option> }
                     </select>
                 </label>
-                <label class="field">Satisfacción mínima
+                <label class="field">@L["Satisfacción mínima"]
                     <select @bind="_minSat" @bind:after="LoadAsync">
-                        <option value="">Cualquiera</option>
-                        @for (var i = 2; i <= 5; i++) { <option value="@i">@i o más</option> }
+                        <option value="">@L["Cualquiera"]</option>
+                        @for (var i = 2; i <= 5; i++) { <option value="@i">@L.F("{0} o más", i)</option> }
                     </select>
                 </label>
             </div>
             @if (ActiveFilters > 0)
             {
-                <button class="btn ghost small" @onclick="ClearAsync"><Icon Name="x" />Quitar filtros</button>
+                <button class="btn ghost small" @onclick="ClearAsync"><Icon Name="x" />@L["Quitar filtros"]</button>
             }
         </div>
     }
 
     @if (_items is not null)
     {
-        <div class="small muted">@_items.Count @(_items.Count == 1 ? "sesión" : "sesiones") · @Format.Hours(_items.Sum(s => s.DurationMinutes) / 60.0) h</div>
+        <div class="small muted">@L.N(_items.Count, "sesión", "sesiones") · @Format.Hours(_items.Sum(s => s.DurationMinutes) / 60.0) h</div>
         <div class="card list-card">
             @if (_items.Count == 0)
             {
-                <div class="empty">@(ActiveFilters > 0 ? "Ninguna sesión cumple los filtros." : "Aún no hay sesiones.")</div>
+                <div class="empty">@L[ActiveFilters > 0 ? "Ninguna sesión cumple los filtros." : "Aún no hay sesiones."]</div>
             }
             else
             {

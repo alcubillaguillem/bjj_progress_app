@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Runtime.InteropServices.JavaScript;
 using BjjJournal.App;
 using BjjJournal.App.Ui;
 using BjjJournal.Application.Abstractions;
@@ -8,10 +9,12 @@ using BjjJournal.Infrastructure.Storage;
 using BjjJournal.Infrastructure.Supabase;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.JSInterop;
 
-var culture = new CultureInfo("es-ES");
-CultureInfo.DefaultThreadCurrentCulture = culture;
-CultureInfo.DefaultThreadCurrentUICulture = culture;
+// Idioma guardado en Ajustes. Se lee antes de crear la app para fijar también fechas y números.
+var loc = Loc.Init(BrowserLang.Get());
+CultureInfo.DefaultThreadCurrentCulture = loc.Culture;
+CultureInfo.DefaultThreadCurrentUICulture = loc.Culture;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -39,5 +42,15 @@ builder.Services.AddSingleton<SessionService>();
 builder.Services.AddSingleton<StatsService>();
 builder.Services.AddSingleton<BackupService>();
 builder.Services.AddSingleton<ToastService>();
+builder.Services.AddSingleton(_ => Loc.Current);
 
-await builder.Build().RunAsync();
+var host = builder.Build();
+await host.Services.GetRequiredService<IJSRuntime>().InvokeVoidAsync("bjjLang.apply", loc.Lang);
+await host.RunAsync();
+
+/// <summary>Lectura síncrona del idioma guardado (bjj.js), disponible antes de construir el host.</summary>
+internal static partial class BrowserLang
+{
+    [JSImport("globalThis.bjjLang.get")]
+    internal static partial string Get();
+}

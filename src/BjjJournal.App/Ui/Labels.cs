@@ -2,16 +2,18 @@ using BjjJournal.Domain.Enums;
 
 namespace BjjJournal.App.Ui;
 
-/// <summary>Textos de UI en español para los enums del dominio.</summary>
+/// <summary>Textos de UI para los enums del dominio (en español; <see cref="Loc"/> los traduce).</summary>
 public static class Labels
 {
+    private static string T(string es) => Loc.Current[es];
+
     public static string Of(Belt v) => v switch
     {
-        Belt.White => "Blanco",
-        Belt.Blue => "Azul",
-        Belt.Purple => "Morado",
-        Belt.Brown => "Marrón",
-        Belt.Black => "Negro",
+        Belt.White => T("Blanco"),
+        Belt.Blue => T("Azul"),
+        Belt.Purple => T("Morado"),
+        Belt.Brown => T("Marrón"),
+        Belt.Black => T("Negro"),
         _ => v.ToString(),
     };
 
@@ -27,15 +29,15 @@ public static class Labels
 
     public static string Of(TechniqueCategory v) => v switch
     {
-        TechniqueCategory.Submission => "Sumisión",
-        TechniqueCategory.Sweep => "Barrida",
-        TechniqueCategory.Pass => "Pase",
-        TechniqueCategory.Escape => "Escape",
-        TechniqueCategory.Takedown => "Derribo",
-        TechniqueCategory.Transition => "Transición",
-        TechniqueCategory.Guard => "Guardia",
-        TechniqueCategory.Control => "Control",
-        TechniqueCategory.Defense => "Defensa",
+        TechniqueCategory.Submission => T("Sumisión"),
+        TechniqueCategory.Sweep => T("Barrida"),
+        TechniqueCategory.Pass => T("Pase"),
+        TechniqueCategory.Escape => T("Escape"),
+        TechniqueCategory.Takedown => T("Derribo"),
+        TechniqueCategory.Transition => T("Transición"),
+        TechniqueCategory.Guard => T("Guardia"),
+        TechniqueCategory.Control => T("Control"),
+        TechniqueCategory.Defense => T("Defensa"),
         _ => v.ToString(),
     };
 
@@ -56,9 +58,9 @@ public static class Labels
 
     public static string Of(PositionRole v) => v switch
     {
-        PositionRole.Top => "Arriba",
-        PositionRole.Bottom => "Abajo",
-        PositionRole.Neutral => "Neutral",
+        PositionRole.Top => T("Arriba"),
+        PositionRole.Bottom => T("Abajo"),
+        PositionRole.Neutral => T("Neutral"),
         _ => v.ToString(),
     };
 
@@ -66,48 +68,48 @@ public static class Labels
 
     public static string Of(SessionType v) => v switch
     {
-        SessionType.Class => "Clase",
-        SessionType.OpenMat => "Open mat",
-        SessionType.Drilling => "Drilling",
-        SessionType.Competition => "Competición",
-        SessionType.Private => "Particular",
+        SessionType.Class => T("Clase"),
+        SessionType.OpenMat => T("Open mat"),
+        SessionType.Drilling => T("Drilling"),
+        SessionType.Competition => T("Competición"),
+        SessionType.Private => T("Particular"),
         _ => v.ToString(),
     };
 
     public static string Of(TechniqueFocus v) => v switch
     {
-        TechniqueFocus.Learned => "Aprendida",
-        TechniqueFocus.Drilled => "Repetida",
-        TechniqueFocus.UsedInRoll => "Usada en roll",
+        TechniqueFocus.Learned => T("Aprendida"),
+        TechniqueFocus.Drilled => T("Repetida"),
+        TechniqueFocus.UsedInRoll => T("Usada en roll"),
         _ => v.ToString(),
     };
 
     public static string Of(RollEventKind v) => v switch
     {
-        RollEventKind.SubmissionFor => "Sumisión a favor",
-        RollEventKind.SubmissionAgainst => "Sumisión en contra",
-        RollEventKind.SweepFor => "Barrida",
-        RollEventKind.PassFor => "Pase",
-        RollEventKind.Escape => "Escape",
+        RollEventKind.SubmissionFor => T("Sumisión a favor"),
+        RollEventKind.SubmissionAgainst => T("Sumisión en contra"),
+        RollEventKind.SweepFor => T("Barrida"),
+        RollEventKind.PassFor => T("Pase"),
+        RollEventKind.Escape => T("Escape"),
         _ => v.ToString(),
     };
 
     public static string Of(ProgressStatus v) => v switch
     {
-        ProgressStatus.NotStarted => "Sin empezar",
-        ProgressStatus.Learning => "Aprendiendo",
-        ProgressStatus.Competent => "Competente",
-        ProgressStatus.Mastered => "Dominada",
+        ProgressStatus.NotStarted => T("Sin empezar"),
+        ProgressStatus.Learning => T("Aprendiendo"),
+        ProgressStatus.Competent => T("Competente"),
+        ProgressStatus.Mastered => T("Dominada"),
         _ => v.ToString(),
     };
 
     public static string Satisfaction(int v) => v switch
     {
-        1 => "Muy mala",
-        2 => "Mala",
-        3 => "Normal",
-        4 => "Buena",
-        5 => "Muy buena",
+        1 => T("Muy mala"),
+        2 => T("Mala"),
+        3 => T("Normal"),
+        4 => T("Buena"),
+        5 => T("Muy buena"),
         _ => "",
     };
 }

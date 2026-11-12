@@ -20,3 +20,8 @@ window.bjjTheme = {
   }
 };
 window.bjjTheme.set(window.bjjTheme.get());
+window.bjjLang = {
+  get: () => { try { return localStorage.getItem("bjj-lang") || "es"; } catch { return "es"; } },
+  apply: (lang) => { document.documentElement.lang = lang; },
+  set: (lang) => { try { localStorage.setItem("bjj-lang", lang); } catch { } location.reload(); }
+};

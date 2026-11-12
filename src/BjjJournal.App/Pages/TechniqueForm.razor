@@ -5,7 +5,7 @@
 @inject NavigationManager Nav
 @inject ToastService Toasts
 
-<PageTitle>@(Id is null ? "Nueva técnica" : "Editar técnica") · BJJ Journal</PageTitle>
+<PageTitle>@L[Id is null ? "Nueva técnica" : "Editar técnica"] · BJJ Journal</PageTitle>
 
 @if (_input is null)
 {
@@ -14,13 +14,13 @@
 
 <div class="view narrow">
     <div class="back-row">
-        <button class="round-btn" aria-label="Volver" @onclick="Back"><Icon Name="left" /></button>
-        <h1 class="subtitle">@(Id is null ? "Nueva técnica" : "Editar técnica")</h1>
+        <button class="round-btn" aria-label="@L["Volver"]" @onclick="Back"><Icon Name="left" /></button>
+        <h1 class="subtitle">@L[Id is null ? "Nueva técnica" : "Editar técnica"]</h1>
     </div>
 
     <div class="card form">
-        <label class="field">Nombre *<input @bind="_input.Name" placeholder="Ej.: Kimura desde media guardia" /></label>
-        <div class="field">Categoría *
+        <label class="field">@L["Nombre *"]<input @bind="_input.Name" placeholder="@L["Ej.: Kimura desde media guardia"]" /></label>
+        <div class="field">@L["Categoría *"]
             <div class="chips">
                 @foreach (var c in Enum.GetValues<TechniqueCategory>())
                 {
@@ -30,45 +30,45 @@
             </div>
         </div>
         <div class="field-row">
-            <label class="field">Posición de partida
+            <label class="field">@L["Posición de partida"]
                 <select @bind="_input.PositionId">
-                    <option value="">Sin posición</option>
+                    <option value="">@L["Sin posición"]</option>
                     @foreach (var p in _positions) { <option value="@p.Id">@p.Name</option> }
                 </select>
             </label>
-            <label class="field">O crea una posición
+            <label class="field">@L["O crea una posición"]
                 <div style="display:flex; gap:6px">
-                    <input @bind="_newPosition" placeholder="Nueva posición" />
-                    <button type="button" class="btn small" disabled="@string.IsNullOrWhiteSpace(_newPosition)" @onclick="CreatePositionAsync">Añadir</button>
+                    <input @bind="_newPosition" placeholder="@L["Nueva posición"]" />
+                    <button type="button" class="btn small" disabled="@string.IsNullOrWhiteSpace(_newPosition)" @onclick="CreatePositionAsync">@L["Añadir"]</button>
                 </div>
             </label>
         </div>
         <div class="field-row">
-            <label class="field">Temario de cinturón
+            <label class="field">@L["Temario de cinturón"]
                 <select @bind="_input.CurriculumBelt">
-                    <option value="">Ninguno</option>
+                    <option value="">@L["Ninguno"]</option>
                     @foreach (var b in Enum.GetValues<Belt>()) { <option value="@b">@Labels.Of(b)</option> }
                 </select>
             </label>
-            <label class="field">Progreso
+            <label class="field">@L["Progreso"]
                 <select @bind="_input.Progress">
                     @foreach (var p in Enum.GetValues<ProgressStatus>()) { <option value="@p">@Labels.Of(p)</option> }
                 </select>
             </label>
         </div>
-        <label class="field">Etiquetas (separadas por comas)<input @bind="Tags" placeholder="gi, presión, favorita" /></label>
-        <label class="field">Descripción<textarea @bind="_input.Description" placeholder="Pasos clave"></textarea></label>
-        <label class="field">Notas<textarea @bind="_input.Notes" placeholder="Detalles, errores típicos…"></textarea></label>
-        <label class="field">Enlaces a vídeos (uno por línea)<textarea @bind="Links" placeholder="https://…"></textarea></label>
+        <label class="field">@L["Etiquetas (separadas por comas)"]<input @bind="Tags" placeholder="@L["gi, presión, favorita"]" /></label>
+        <label class="field">@L["Descripción"]<textarea @bind="_input.Description" placeholder="@L["Pasos clave"]"></textarea></label>
+        <label class="field">@L["Notas"]<textarea @bind="_input.Notes" placeholder="@L["Detalles, errores típicos…"]"></textarea></label>
+        <label class="field">@L["Enlaces a vídeos (uno por línea)"]<textarea @bind="Links" placeholder="https://…"></textarea></label>
     </div>
 
-    @if (_error is not null) { <div class="error">@_error</div> }
+    @if (_error is not null) { <div class="error">@L[_error]</div> }
     <div class="form-actions">
         @if (Id is not null)
         {
-            <button type="button" class="btn danger" @onclick="DeleteAsync"><Icon Name="trash" />Borrar</button>
+            <button type="button" class="btn danger" @onclick="DeleteAsync"><Icon Name="trash" />@L["Borrar"]</button>
         }
-        <button type="button" class="btn primary big-btn" @onclick="SaveAsync"><Icon Name="check" />Guardar técnica</button>
+        <button type="button" class="btn primary big-btn" @onclick="SaveAsync"><Icon Name="check" />@L["Guardar técnica"]</button>
     </div>
 </div>
 
@@ -125,7 +125,7 @@
                 return;
             }
 
-            Toasts.Show("Técnica actualizada");
+            Toasts.Show(L["Técnica actualizada"]);
             Nav.NavigateTo($"tecnicas/{id}", replace: true);
         }
         else
@@ -137,7 +137,7 @@
                 return;
             }
 
-            Toasts.Show("Técnica creada");
+            Toasts.Show(L["Técnica creada"]);
             Nav.NavigateTo($"tecnicas/{result.Value}", replace: true);
         }
     }
@@ -147,12 +147,12 @@
         if (!_confirmDelete)
         {
             _confirmDelete = true;
-            _error = "Pulsa «Borrar» otra vez para confirmar. Las sesiones donde aparece se conservan.";
+            _error = L["Pulsa «Borrar» otra vez para confirmar. Las sesiones donde aparece se conservan."];
             return;
         }
 
         await Techniques.DeleteAsync(Id!.Value);
-        Toasts.Show("Técnica borrada");
+        Toasts.Show(L["Técnica borrada"]);
         Nav.NavigateTo("tecnicas", replace: true);
     }
 

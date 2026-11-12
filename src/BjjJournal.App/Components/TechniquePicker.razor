@@ -5,29 +5,29 @@
 <div class="form">
     <div class="search-box">
         <Icon Name="search" />
-        <input placeholder="Buscar o crear técnica…" @bind="_query" @bind:event="oninput" @bind:after="Search" />
+        <input placeholder="@L["Buscar o crear técnica…"]" @bind="_query" @bind:event="oninput" @bind:after="Search" />
     </div>
 
     @if (_creating)
     {
         <div class="sub-card">
-            <div class="roll-head"><strong>Nueva técnica</strong><button type="button" class="icon-btn" aria-label="Cancelar" @onclick="() => _creating = false"><Icon Name="x" /></button></div>
-            <label class="field">Nombre<input @bind="_new.Name" /></label>
+            <div class="roll-head"><strong>@L["Nueva técnica"]</strong><button type="button" class="icon-btn" aria-label="@L["Cancelar"]" @onclick="() => _creating = false"><Icon Name="x" /></button></div>
+            <label class="field">@L["Nombre"]<input @bind="_new.Name" /></label>
             <div class="field-row">
-                <label class="field">Categoría
+                <label class="field">@L["Categoría"]
                     <select @bind="_new.Category">
                         @foreach (var c in Enum.GetValues<TechniqueCategory>()) { <option value="@c">@Labels.Of(c)</option> }
                     </select>
                 </label>
-                <label class="field">Posición
+                <label class="field">@L["Posición"]
                     <select @bind="_new.PositionId">
-                        <option value="">Sin posición</option>
+                        <option value="">@L["Sin posición"]</option>
                         @foreach (var p in _positions) { <option value="@p.Id">@p.Name</option> }
                     </select>
                 </label>
             </div>
-            @if (_error is not null) { <div class="error">@_error</div> }
-            <button type="button" class="btn primary" @onclick="CreateAsync"><Icon Name="check" />Crear y añadir</button>
+            @if (_error is not null) { <div class="error">@L[_error]</div> }
+            <button type="button" class="btn primary" @onclick="CreateAsync"><Icon Name="check" />@L["Crear y añadir"]</button>
         </div>
     }
     else if (!string.IsNullOrWhiteSpace(_query))
@@ -41,7 +41,7 @@
                     <span class="meta">@(item.PositionName ?? Labels.Of(item.Category))</span>
                 </button>
             }
-            <button type="button" @onclick="StartCreate"><span class="accent"><Icon Name="plus" /></span>Crear «@_query.Trim()»</button>
+            <button type="button" @onclick="StartCreate"><span class="accent"><Icon Name="plus" /></span>@L.F("Crear «{0}»", _query.Trim())</button>
         </div>
     }
 </div>

@@ -1,0 +1,58 @@
+@page "/perfil/editar"
+@inject ProfileService Profiles
+@inject ToastService Toasts
+@inject NavigationManager Nav
+
+<PageTitle>@L["Editar perfil"] · BJJ Journal</PageTitle>
+
+@if (_p is null)
+{
+    return;
+}
+
+<div class="view narrow">
+    <div class="back-row">
+        <a class="round-btn" aria-label="@L["Volver"]" href="perfil"><Icon Name="left" /></a>
+        <h1 class="subtitle">@L["Editar perfil"]</h1>
+    </div>
+
+    <div class="card form">
+        <label class="field">@L["Nombre"]<input @bind="_p.DisplayName" /></label>
+        <div class="field-row">
+            <label class="field">@L["Cinturón"]
+                <select @bind="_p.Belt">
+                    @foreach (var b in Enum.GetValues<Belt>()) { <option value="@b">@Labels.Of(b)</option> }
+                </select>
+            </label>
+            <label class="field">@L["Grados"]
+                <select @bind="_p.Stripes">
+                    @for (var i = 0; i <= 4; i++) { <option value="@i">@i</option> }
+                </select>
+            </label>
+        </div>
+        <div class="field-row">
+            <label class="field">@L["Gimnasio"]<input @bind="_p.GymName" /></label>
+            <label class="field">@L["Empecé a entrenar"]<input type="date" @bind="_p.StartedTraining" /></label>
+        </div>
+        @if (_error is not null) { <div class="error">@L[_error]</div> }
+        <button class="btn primary" @onclick="SaveAsync"><Icon Name="check" />@L["Guardar"]</button>
+    </div>
+</div>
+
+@code {
+    private ProfileInput? _p;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync() => _p = await Profiles.GetAsync() ?? new ProfileInput();
+
+    private async Task SaveAsync()
+    {
+        var result = await Profiles.SaveAsync(_p!);
+        _error = result.Error;
+        if (result.IsSuccess)
+        {
+            Toasts.Show(L["Perfil guardado"]);
+            Nav.NavigateTo("perfil");
+        }
+    }
+}

@@ -36,6 +36,92 @@ public sealed class StatsService(JournalContext context, TimeProvider time)
             Gaps(sessions, data, today));
     }
 
+    public const int RadarAxes = 6;
+
+    /// <summary>
+    /// Ranking de sumisiones (a favor o en contra) de un mes, o de todo el histórico si year/month son null.
+    /// Con withPositions agrupa por técnica y posición del evento («Armbar · Montada»).
+    /// </summary>
+    public async Task<SubmissionBreakdown> GetSubmissionsAsync(
+        int? year, int? month, RollEventKind kind = RollEventKind.SubmissionFor, bool withPositions = false, CancellationToken ct = default)
+    {
+        var data = await context.GetAsync(ct);
+        var sessions = data.Sessions.Active()
+            .Where(s => year is null || (time.LocalDate(s.StartedAt).Year == year && (month is null || time.LocalDate(s.StartedAt).Month == month)));
+        return Breakdown(sessions, data, kind, withPositions);
+    }
+
+    public async Task<ProfileSummary> GetProfileSummaryAsync(CancellationToken ct = default)
+    {
+        var data = await context.GetAsync(ct);
+        var sessions = data.Sessions.Active().OrderBy(s => s.StartedAt).ToList();
+        var minutes = sessions.Sum(s => s.DurationMinutes);
+        var rolls = sessions.Sum(s => s.Rolls.Count(r => !r.IsDeleted));
+        var subsFor = sessions.Sum(s => s.CountEvents(RollEventKind.SubmissionFor));
+        var subsAgainst = sessions.Sum(s => s.CountEvents(RollEventKind.SubmissionAgainst));
+        var mix = new SessionMix(
+            sessions.Count(s => s.Attire == Attire.Gi),
+            sessions.Count(s => s.Attire == Attire.NoGi),
+            sessions.Count(s => s.Type is SessionType.Class or SessionType.Private),
+            sessions.Count(s => s.Type == SessionType.OpenMat),
+            sessions.Count(s => s.Type == SessionType.Drilling),
+            sessions.Count(s => s.Type == SessionType.Competition));
+
+        return new ProfileSummary(
+            sessions.Count,
+            minutes / 60.0,
+            rolls,
+            subsFor,
+            subsAgainst,
+            CurrentStreak(sessions, time.Today()),
+            LevelFor(Experience(sessions.Count, minutes, rolls, subsFor)),
+            Breakdown(sessions, data, RollEventKind.SubmissionFor, false).Items.Take(RadarAxes).ToList(),
+            mix);
+    }
+
+    /// <summary>10 XP por sesión, 1 por cada 10 minutos, 1 por roll y 3 por sumisión a favor.</summary>
+    public static int Experience(int sessions, int minutes, int rolls, int submissionsFor) =>
+        (sessions * 10) + (minutes / 10) + rolls + (submissionsFor * 3);
+
+    /// <summary>El nivel L empieza en 25·L·(L−1) XP: 0, 50, 150, 300, 500…</summary>
+    public static LevelInfo LevelFor(int xp)
+    {
+        static int Start(int level) => 25 * level * (level - 1);
+        var level = 1;
+        while (Start(level + 1) <= xp)
+        {
+            level++;
+        }
+
+        return new LevelInfo(level, xp, Start(level), Start(level + 1));
+    }
+
+    private static SubmissionBreakdown Breakdown(IEnumerable<TrainingSession> sessions, AppData data, RollEventKind kind, bool withPositions)
+    {
+        var names = data.Techniques.ToDictionary(t => t.Id, t => t.Name);
+        var positions = data.Positions.ToDictionary(p => p.Id, p => p.Name);
+        var events = sessions
+            .SelectMany(s => s.Rolls).Where(r => !r.IsDeleted)
+            .SelectMany(r => r.Events)
+            .Where(e => !e.IsDeleted && e.Kind == kind)
+            .ToList();
+        var total = events.Count;
+
+        var items = events
+            .GroupBy(e => (e.TechniqueId, PositionId: withPositions ? e.PositionId : null))
+            .Select(g => new SubmissionSlice(
+                g.Key.TechniqueId,
+                g.Key.TechniqueId is { } id && names.TryGetValue(id, out var n) ? n : "Sin técnica",
+                g.Key.PositionId is { } pid && positions.TryGetValue(pid, out var p) ? p : null,
+                g.Count(),
+                total == 0 ? 0 : (double)g.Count() / total))
+            .OrderByDescending(x => x.Count)
+            .ThenBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+
+        return new SubmissionBreakdown(total, events.Select(e => e.TechniqueId).Distinct().Count(), items);
+    }
+
     /// <summary>1. Sesiones y horas por semana, últimas 12 semanas (la actual incluida).</summary>
     internal IReadOnlyList<WeeklyPoint> Weekly(IReadOnlyList<TrainingSession> sessions, DateOnly today)
     {
