@@ -12,11 +12,11 @@ App web instalable (PWA) hecha íntegramente en C# con **.NET 10 + Blazor WebAss
 | --- | --- |
 | Onboarding de 3 pasos (nombre, cinturón y grados, semilla de técnicas) | `/bienvenida` |
 | Biblioteca de técnicas: CRUD, categorías, posición, etiquetas, notas, enlaces, veces trabajada | `/tecnicas` |
-| Búsqueda sin tildes ni mayúsculas por nombre, posición, etiqueta o notas; filtros por categoría, posición y etiqueta | `/tecnicas` |
+| Técnicas en bloques por categoría y búsqueda sin tildes ni mayúsculas por nombre, posición, etiqueta o notas | `/tecnicas`, `/tecnicas/categoria/{slug}` |
 | Registro de sesión en 2 toques desde cualquier pantalla (+), con valores por defecto de la última sesión | `/sesiones/nueva` |
 | Técnicas trabajadas con foco, creación de técnica nueva sin salir del formulario | formulario de sesión |
 | Rolls con compañero, cinturón, duración y eventos (sumisión a favor/en contra, barrida, pase, escape) | formulario de sesión |
-| Filtros de sesiones por fechas, tipo, gi/no-gi y satisfacción | `/sesiones` |
+| Calendario mensual de sesiones con resumen del mes (sesiones, horas, días y sumisiones) | `/sesiones` |
 | Dashboard con las 6 métricas de F5 + lagunas del juego (30 días) | `/` |
 | Checklist por cinturón con barra de progreso (plantilla blanco y azul) | `/cinturon` |
 | Perfil: nivel por experiencia, cinturón, contadores y radares de sumisiones y sesiones | `/perfil` |
@@ -38,7 +38,7 @@ Inicio de sesión con correo y contraseña o con Google (Supabase Auth, proyecto
 src/
   BjjJournal.Domain/          entidades, enums, Result<T>, reglas (sin paquetes NuGet)
   BjjJournal.Application/     servicios (casos de uso), DTOs, IAppDataStore, semilla
-  BjjJournal.Infrastructure/  LocalStorageDataStore (localStorage vía JS interop)
+  BjjJournal.Infrastructure/  localStorage (JS interop) y cliente HTTP de Supabase (Auth y tabla)
   BjjJournal.App/             Blazor WebAssembly: páginas, componentes, gráficos SVG
 tests/
   BjjJournal.Domain.Tests/       reglas de dominio y normalización de texto
@@ -48,8 +48,8 @@ tests/
 - App → Application + Infrastructure; Infrastructure → Application; Application → Domain; Domain → nada.
 - Las páginas solo llaman a servicios de Application, que devuelven DTOs.
 - Hora vía `TimeProvider` inyectado; fechas en UTC y conversión a hora local solo en la UI.
-- Ids `Guid` generados en el cliente, `UpdatedAt` e `IsDeleted` en todas las entidades: preparado para sincronizar en la fase 3.
-- Los gráficos (barras, línea, donut) se generan como SVG en componentes Razor. El único JavaScript es `wwwroot/js/bjj.js` (localStorage, descarga de ficheros y tema).
+- Ids `Guid` generados en el cliente, `UpdatedAt` e `IsDeleted` en todas las entidades: es lo que permite fusionar copias al sincronizar.
+- Los gráficos (barras, línea, donut y radar) se generan como SVG en componentes Razor. El único JavaScript es `wwwroot/js/bjj.js` (localStorage, descarga de ficheros, tema e idioma).
 
 ### Cambios respecto al documento de contexto
 
@@ -58,14 +58,14 @@ tests/
 | .NET MAUI | Blazor WebAssembly PWA | Que sea como Control Finanzas: web instalable en móvil y PC, sin tiendas ni compilar por plataforma |
 | SQLite + EF Core | JSON en localStorage (`IAppDataStore`) | EF Core + SQLite en WebAssembly es frágil; la interfaz permite cambiarlo sin tocar Application |
 | LiveCharts2 / SkiaSharp | SVG propio en Razor | Sin dependencias, respeta el tema claro/oscuro |
-| `.resx` | Textos en `Ui/Labels.cs` | Pendiente si se quiere multidioma |
+| `.resx` | Español e inglés con `Ui/Loc.cs` + diccionario `Ui/English.cs` | El texto en español es la clave; si falta una traducción se ve en español. Sin ficheros de recursos |
 
 ## Ejecutar
 
 Requiere el SDK de .NET 10.
 
 ```bash
-dotnet test                              # 90 tests
+dotnet test                              # 90 métodos de test (105 casos con los [Theory])
 dotnet run --project src/BjjJournal.App  # abre la URL que muestra la consola
 ```
 

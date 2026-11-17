@@ -481,5 +481,7 @@ $RECYCLE.BIN/
 # Vim temporary swap files
 *.swp
 out/
+# Salidas de dotnet publish en la raíz (out, out2...)
+/out*/
 publish/
 demo/
