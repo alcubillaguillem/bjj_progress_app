@@ -1,0 +1,112 @@
+@page "/sesiones"
+
+<PageTitle>@L["Sesiones"] · BJJ Journal</PageTitle>
+
+<div class="view narrow">
+    <div class="view-head">
+        <h1 class="title">@L["Sesiones"]</h1>
+        <a class="btn primary pill" style="background:var(--accent)" href="sesiones/nueva?fecha=@_selected.ToString("yyyy-MM-dd")"><Icon Name="plus" />@L["Nueva"]</a>
+    </div>
+
+    <section class="card cal">
+        <div class="cal-top">
+            <button type="button" class="cal-month" @onclick="GoToday" title="@L["Ir a hoy"]">
+                <span>@MonthName</span><small>@_month.Year</small>
+            </button>
+            <div class="cal-arrows">
+                <button class="round-btn" aria-label="@L["Mes anterior"]" @onclick="() => Move(-1)"><Icon Name="left" /></button>
+                <button class="round-btn" aria-label="@L["Mes siguiente"]" @onclick="() => Move(1)"><Icon Name="right" /></button>
+            </div>
+        </div>
+
+        <div class="cal-week">
+            @foreach (var name in WeekDays) { <span>@name</span> }
+        </div>
+
+        <div class="cal-days">
+            @for (var i = 0; i < ((int)_month.DayOfWeek + 6) % 7; i++) { <span class="cal-cell"></span> }
+            @for (var day = _month; day.Month == _month.Month; day = day.AddDays(1))
+            {
+                var d = day;
+                var sessions = OnDay(d);
+                <button type="button" class="cal-cell" aria-label="@d.ToString("D")" aria-pressed="@(d == _selected)" @onclick="() => _selected = d">
+                    <span class="cal-dot @(sessions.Count > 0 ? "on" : "") @(d == Stats.Today ? "today" : "") @(d == _selected ? "sel" : "")"
+                          style="@(sessions.Count > 0 ? $"--c:{Labels.TypeColor(sessions[0].Type)}" : "")">
+                        @d.Day
+                        @if (sessions.Count > 1) { <i>@sessions.Count</i> }
+                    </span>
+                </button>
+            }
+        </div>
+
+        <div class="cal-stats">
+            <div><b>@InMonth.Count</b><span>@L["sesiones"]</span></div>
+            <div><b>@Format.Hours(Stats.Hours(InMonth))</b><span>@L["horas"]</span></div>
+            <div><b>@InMonth.Select(s => s.Day).Distinct().Count()</b><span>@L["días"]</span></div>
+            <div><b>@InMonth.Sum(s => s.Count(RollEventKind.SubmissionFor))</b><span>@L["sumisiones"]</span></div>
+        </div>
+    </section>
+
+    <section class="day-sec">
+        <h2 class="day-title">@DayTitle</h2>
+
+        @if (OnDay(_selected).Count == 0)
+        {
+            <div class="card day-empty">
+                <span class="muted">@L[_selected > Stats.Today ? "Sin sesiones todavía." : "Día de descanso."]</span>
+                <a class="btn small" href="sesiones/nueva?fecha=@_selected.ToString("yyyy-MM-dd")"><Icon Name="plus" />@L["Añadir sesión"]</a>
+            </div>
+        }
+
+        @foreach (var s in OnDay(_selected))
+        {
+            <a class="card s-card" href="sesiones/@s.Id" style="--c:@Labels.TypeColor(s.Type)">
+                <div class="s-main">
+                    <div class="s-title">@Labels.Of(s.Type) <span>· @Labels.Of(s.Attire)</span></div>
+                    <div class="s-sub">@Format.Local(s.StartedAt).ToString("HH:mm") · @Format.Minutes(s.DurationMinutes)@(s.Location is null ? "" : $" · {s.Location}")</div>
+                    <div class="s-pills">
+                        @if (s.Techniques.Count > 0) { <span><Icon Name="book" />@L.N(s.Techniques.Count, "técnica", "técnicas")</span> }
+                        @if (s.Rolls.Count > 0) { <span><Icon Name="swords" />@L.N(s.Rolls.Count, "roll", "rolls")</span> }
+                        @if (s.Count(RollEventKind.SubmissionFor) + s.Count(RollEventKind.SubmissionAgainst) > 0) { <span><Icon Name="target" /><b class="accent">@s.Count(RollEventKind.SubmissionFor)</b>–<b class="danger-text">@s.Count(RollEventKind.SubmissionAgainst)</b></span> }
+                    </div>
+                </div>
+                <div class="s-side">
+                    <Stars Value="s.Satisfaction" />
+                    <Icon Name="right" />
+                </div>
+            </a>
+        }
+    </section>
+</div>
+
+@code {
+    private DateOnly _month = new(Stats.Today.Year, Stats.Today.Month, 1);
+    private DateOnly _selected = Stats.Today;
+
+    private List<TrainingSession> InMonth =>
+        Journal.Sessions.Where(s => s.Day.Year == _month.Year && s.Day.Month == _month.Month).ToList();
+
+    private List<TrainingSession> OnDay(DateOnly day) => Journal.Sessions.Where(s => s.Day == day).OrderBy(s => s.StartedAt).ToList();
+
+    private string MonthName => Format.Capitalize(_month.ToString("MMMM"));
+
+    private string DayTitle => Format.Capitalize(_selected.ToString(L.IsEnglish ? "dddd, d MMMM" : "dddd, d 'de' MMMM"));
+
+    /// <summary>Iniciales de lunes a domingo en el idioma activo.</summary>
+    private static IEnumerable<string> WeekDays =>
+        Enumerable.Range(1, 7).Select(i => CultureInfo.CurrentCulture.DateTimeFormat.GetShortestDayName((DayOfWeek)(i % 7)).ToUpperInvariant()[..1]);
+
+    /// <summary>Cambia de mes y selecciona hoy (mes actual) o el último día entrenado.</summary>
+    private void Move(int months)
+    {
+        _month = _month.AddMonths(months);
+        var isCurrent = _month == new DateOnly(Stats.Today.Year, Stats.Today.Month, 1);
+        _selected = isCurrent ? Stats.Today : InMonth.Select(s => s.Day).DefaultIfEmpty(_month).Max();
+    }
+
+    private void GoToday()
+    {
+        _month = new DateOnly(Stats.Today.Year, Stats.Today.Month, 1);
+        _selected = Stats.Today;
+    }
+}

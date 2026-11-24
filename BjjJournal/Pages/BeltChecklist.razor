@@ -1,0 +1,96 @@
+@page "/cinturon"
+
+<PageTitle>@L["Cinturón"] · BJJ Journal</PageTitle>
+
+<div class="view">
+    <div class="view-head">
+        <div>
+            <div class="label">@L["Checklist por cinturón"]</div>
+            <h1 class="title">@L["Cinturón"]</h1>
+        </div>
+        <a class="btn pill" href="tecnicas/nueva"><Icon Name="plus" />@L["Técnica"]</a>
+    </div>
+
+    @if (_belts.Count == 0)
+    {
+        <div class="card empty">@L["Ninguna técnica tiene temario de cinturón. Edita una técnica y elige «Temario de cinturón»."]</div>
+    }
+    else
+    {
+        <div class="grid-3">
+            @foreach (var belt in _belts)
+            {
+                var all = InBelt(belt).ToList();
+                var done = all.Count(t => t.Progress >= ProgressStatus.Competent);
+                var pct = 100.0 * done / all.Count;
+                <button class="card" style="text-align:left; cursor:pointer; @(_belt == belt ? "border-color:var(--accent)" : "")" @onclick="() => { _belt = belt; _status = null; }">
+                    <div class="card-head" style="margin-bottom:10px">
+                        <h2 style="display:flex; align-items:center; gap:10px"><span class="belt-chip @(belt == Belt.Black ? "black" : "")" style="background:@Labels.BeltColor(belt)"></span>@Labels.Of(belt)</h2>
+                        <span class="kpi-num" style="margin:0; font-size:22px">@pct.ToString("0")%</span>
+                    </div>
+                    <div class="bar"><div class="fill" style="width:@pct.ToString("0.#", CultureInfo.InvariantCulture)%"></div></div>
+                    <div class="small muted" style="margin-top:8px">@L.F("{0} de {1} competentes o dominadas", done, all.Count)</div>
+                </button>
+            }
+        </div>
+
+        <div class="chips">
+            <button class="chip @(_status is null ? "on" : "")" @onclick="() => _status = null">@L["Todas"]</button>
+            @foreach (var s in Enum.GetValues<ProgressStatus>())
+            {
+                var st = s;
+                <button class="chip @(_status == st ? "on" : "")" @onclick="() => _status = st">@Labels.Of(st) (@InBelt(_belt).Count(i => i.Progress == st))</button>
+            }
+        </div>
+
+        <div class="card list-card">
+            <h2>@L.F("Temario {0}", Labels.Of(_belt).ToLowerInvariant())</h2>
+            <div class="list">
+                @foreach (var group in InBelt(_belt).Where(i => _status is null || i.Progress == _status).GroupBy(i => i.Category).OrderBy(g => g.Key))
+                {
+                    <div class="day"><span>@Labels.Of(group.Key)</span><span>@group.Count()</span></div>
+                    @foreach (var t in group)
+                    {
+                        var item = t;
+                        <div class="item" style="cursor:default">
+                            <span class="cat-ic" style="color:@(item.Progress >= ProgressStatus.Competent ? "var(--accent)" : "var(--muted)")"><Icon Name="@(item.Progress >= ProgressStatus.Competent ? "check" : "target")" /></span>
+                            <a class="info" href="tecnicas/@item.Id" style="color:inherit">
+                                <div class="note">@item.Name</div>
+                                <div class="meta">@(Journal.PositionName(item.PositionId) ?? L["Sin posición"]) · @L["trabajada"] @L.N(_usage.GetValueOrDefault(item.Id).Count, "vez", "veces")</div>
+                            </a>
+                            <select class="progress-select" value="@item.Progress" aria-label="@L["Progreso"] · @item.Name"
+                                    @onchange="e => SetAsync(item, e.Value)">
+                                @foreach (var s in Enum.GetValues<ProgressStatus>()) { <option value="@s">@Labels.Of(s)</option> }
+                            </select>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Belt> _belts = [];
+    private Dictionary<Guid, (int Count, DateTimeOffset Last)> _usage = [];
+    private Belt _belt;
+    private ProgressStatus? _status;
+
+    private IEnumerable<Technique> InBelt(Belt belt) =>
+        Journal.Techniques.Where(t => t.CurriculumBelt == belt).OrderBy(t => t.Name, StringComparer.CurrentCultureIgnoreCase);
+
+    protected override void OnInitialized()
+    {
+        _belts = Journal.Techniques.Where(t => t.CurriculumBelt != null).Select(t => t.CurriculumBelt!.Value).Distinct().Order().ToList();
+        _usage = Journal.Usage();
+        // Por defecto, el temario del cinturón siguiente al tuyo (o el tuyo si no hay temario siguiente).
+        var mine = Journal.Data.Profile?.Belt ?? Belt.White;
+        _belt = _belts.Where(b => b > mine).Cast<Belt?>().FirstOrDefault() ?? (_belts.Contains(mine) ? mine : _belts.FirstOrDefault());
+    }
+
+    private async Task SetAsync(Technique t, object? value)
+    {
+        t.Progress = Enum.Parse<ProgressStatus>(value!.ToString()!);
+        await Journal.SaveTechniqueAsync(t);
+    }
+}

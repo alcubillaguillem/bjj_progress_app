@@ -1,0 +1,69 @@
+@* Buscador de técnicas para el formulario de sesión. Permite crear una técnica nueva sin salir del formulario. *@
+<div class="form">
+    <div class="search-box">
+        <Icon Name="search" />
+        <input placeholder="@L["Buscar o crear técnica…"]" @bind="_query" @bind:event="oninput" />
+    </div>
+
+    @if (_new is not null)
+    {
+        <div class="sub-card">
+            <div class="roll-head"><strong>@L["Nueva técnica"]</strong><button type="button" class="icon-btn" aria-label="@L["Cancelar"]" @onclick="() => _new = null"><Icon Name="x" /></button></div>
+            <label class="field">@L["Nombre"]<input @bind="_new.Name" /></label>
+            <div class="field-row">
+                <label class="field">@L["Categoría"]
+                    <select @bind="_new.Category">
+                        @foreach (var c in Enum.GetValues<TechniqueCategory>()) { <option value="@c">@Labels.Of(c)</option> }
+                    </select>
+                </label>
+                <label class="field">@L["Posición"]
+                    <select @bind="_new.PositionId">
+                        <option value="">@L["Sin posición"]</option>
+                        @foreach (var p in Journal.Positions) { <option value="@p.Id">@p.Name</option> }
+                    </select>
+                </label>
+            </div>
+            @if (_error is not null) { <div class="error">@L[_error]</div> }
+            <button type="button" class="btn primary" @onclick="CreateAsync"><Icon Name="check" />@L["Crear y añadir"]</button>
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(_query))
+    {
+        <div class="picker-results">
+            @foreach (var t in Journal.Search(_query).Where(t => !Exclude.Contains(t.Id)).OrderBy(t => t.Name, StringComparer.CurrentCultureIgnoreCase).Take(8))
+            {
+                var item = t;
+                <button type="button" @onclick="() => PickAsync(item.Id)">
+                    <span class="dot" style="background:@Labels.CategoryColor(item.Category)"></span>@item.Name
+                    <span class="meta">@(Journal.PositionName(item.PositionId) ?? Labels.Of(item.Category))</span>
+                </button>
+            }
+            <button type="button" @onclick="() => { _new = new Technique { Name = _query.Trim() }; _error = null; }"><span class="accent"><Icon Name="plus" /></span>@L.F("Crear «{0}»", _query.Trim())</button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public IReadOnlyCollection<Guid> Exclude { get; set; } = [];
+    [Parameter] public EventCallback<Guid> OnPick { get; set; }
+
+    private string _query = "";
+    private Technique? _new;
+    private string? _error;
+
+    private async Task CreateAsync()
+    {
+        _error = await Journal.SaveTechniqueAsync(_new!);
+        if (_error is null)
+        {
+            await PickAsync(_new!.Id);
+            _new = null;
+        }
+    }
+
+    private async Task PickAsync(Guid id)
+    {
+        _query = "";
+        await OnPick.InvokeAsync(id);
+    }
+}

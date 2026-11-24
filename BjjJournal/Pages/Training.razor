@@ -1,0 +1,130 @@
+@page "/entrenar"
+@layout BareLayout
+@implements IDisposable
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+@* Entrenamiento en directo: cronómetro a pantalla completa y, al parar, preguntas una a una. *@
+
+<PageTitle>@L["Entrenando"] · BJJ Journal</PageTitle>
+
+<div class="onboard training">
+    @if (_step == 0)
+    {
+        <div class="label">@L["Entrenando"]</div>
+        <div class="clock">@Elapsed.ToString(@"hh\:mm\:ss")</div>
+        <button class="play-btn" aria-label="@L["Terminar sesión"]" @onclick="StopAsync"><Icon Name="pause" /></button>
+        <button class="btn ghost" @onclick="CancelAsync">@L["Cancelar"]</button>
+    }
+    else
+    {
+        <div class="steps-dots">
+            @for (var i = 1; i <= 5; i++) { <span class="@(i <= _step ? "on" : "")"></span> }
+        </div>
+        <div class="muted">@Format.Minutes(_s.DurationMinutes)</div>
+
+        @switch (_step)
+        {
+            case 1:
+                <h1>@L["¿Qué tal fue la sesión?"]</h1>
+                <div class="stars">
+                    @for (var i = 1; i <= 5; i++)
+                    {
+                        var n = i;
+                        <button type="button" class="big-btn" @onclick="() => { _s.Satisfaction = n; _step++; }">@n</button>
+                    }
+                </div>
+                break;
+
+            case 2:
+                <h1>@L["¿Qué tipo de sesión?"]</h1>
+                @foreach (var t in Enum.GetValues<SessionType>())
+                {
+                    var type = t;
+                    <button class="btn big-btn" @onclick="() => { _s.Type = type; _step++; }">@Labels.Of(type)</button>
+                }
+                break;
+
+            case 3:
+                <h1>@L["¿Gi o no-gi?"]</h1>
+                @foreach (var a in Enum.GetValues<Attire>())
+                {
+                    var attire = a;
+                    <button class="btn big-btn" @onclick="() => { _s.Attire = attire; _step++; }">@Labels.Of(attire)</button>
+                }
+                break;
+
+            case 4:
+                <h1>@L["¿Qué técnicas trabajaste?"]</h1>
+                <div class="chips">
+                    @foreach (var st in _s.Techniques)
+                    {
+                        var item = st;
+                        <button class="chip on" @onclick="() => _s.Techniques.Remove(item)">@Journal.TechniqueName(item.TechniqueId) <Icon Name="x" /></button>
+                    }
+                </div>
+                <TechniquePicker Exclude="@(_s.Techniques.Select(t => t.TechniqueId).ToList())" OnPick="id => _s.Techniques.Add(new SessionTechnique { TechniqueId = id })" />
+                <button class="btn primary big-btn" @onclick="() => _step++">@L["Siguiente"]</button>
+                break;
+
+            default:
+                <h1>@L["¿Algo que apuntar?"]</h1>
+                <textarea @bind="_s.Notes" placeholder="@L["Qué aprendiste, qué falló, detalles que no quieres olvidar…"]"></textarea>
+                <button class="btn primary big-btn" @onclick="SaveAsync"><Icon Name="check" />@L["Guardar sesión"]</button>
+                break;
+        }
+    }
+</div>
+
+@code {
+    private const string StartKey = "bjj-training.start";
+
+    private DateTimeOffset _start = DateTimeOffset.UtcNow;
+    private TrainingSession _s = new();
+    private int _step; // 0 = cronómetro, 1-5 = preguntas
+    private Timer? _tick;
+
+    private TimeSpan Elapsed => DateTimeOffset.UtcNow - _start;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // La hora de inicio se guarda: si se cierra o recarga la app, el cronómetro sigue.
+        var saved = await JS.InvokeAsync<string?>("bjjStorage.get", StartKey);
+        if (DateTimeOffset.TryParse(saved, out var start))
+        {
+            _start = start;
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("bjjStorage.set", StartKey, _start.ToString("O"));
+        }
+
+        _tick = new Timer(_ => InvokeAsync(StateHasChanged), null, 0, 1000);
+    }
+
+    private async Task StopAsync()
+    {
+        _tick?.Dispose();
+        _s = Journal.NewSession();
+        _s.StartedAt = _start;
+        _s.DurationMinutes = Math.Max(1, (int)Math.Round(Elapsed.TotalMinutes));
+        _step = 1;
+        await Journal.SaveSessionAsync(_s); // el tiempo queda registrado ya; las respuestas lo completan
+        await JS.InvokeVoidAsync("bjjStorage.set", StartKey, null);
+    }
+
+    private async Task CancelAsync()
+    {
+        await JS.InvokeVoidAsync("bjjStorage.set", StartKey, null);
+        Nav.NavigateTo("./");
+    }
+
+    private async Task SaveAsync()
+    {
+        await Journal.SaveSessionAsync(_s);
+        Toast.Show(L["Sesión guardada"]);
+        Nav.NavigateTo($"sesiones/{_s.Id}", replace: true);
+    }
+
+    public void Dispose() => _tick?.Dispose();
+}

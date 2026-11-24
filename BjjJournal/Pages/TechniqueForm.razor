@@ -1,0 +1,138 @@
+@page "/tecnicas/nueva"
+@page "/tecnicas/{Id:guid}/editar"
+@inject NavigationManager Nav
+
+<PageTitle>@L[Id is null ? "Nueva técnica" : "Editar técnica"] · BJJ Journal</PageTitle>
+
+@if (_t is null)
+{
+    return;
+}
+
+<div class="view narrow">
+    <div class="back-row">
+        <button class="round-btn" aria-label="@L["Volver"]" @onclick="Back"><Icon Name="left" /></button>
+        <h1 class="subtitle">@L[Id is null ? "Nueva técnica" : "Editar técnica"]</h1>
+    </div>
+
+    <div class="card form">
+        <label class="field">@L["Nombre *"]<input @bind="_t.Name" placeholder="@L["Ej.: Kimura desde media guardia"]" /></label>
+        <div class="field">@L["Categoría *"]
+            <div class="chips">
+                @foreach (var c in Enum.GetValues<TechniqueCategory>())
+                {
+                    var cat = c;
+                    <button type="button" class="chip @(_t.Category == cat ? "on" : "")" @onclick="() => _t.Category = cat"><span class="dot" style="background:@Labels.CategoryColor(cat)"></span>@Labels.Of(cat)</button>
+                }
+            </div>
+        </div>
+        <div class="field-row">
+            <label class="field">@L["Posición de partida"]
+                <select @bind="_t.PositionId">
+                    <option value="">@L["Sin posición"]</option>
+                    @foreach (var p in Journal.Positions) { <option value="@p.Id">@p.Name</option> }
+                </select>
+            </label>
+            <label class="field">@L["O crea una posición"]
+                <div style="display:flex; gap:6px">
+                    <input @bind="_newPosition" placeholder="@L["Nueva posición"]" />
+                    <button type="button" class="btn small" disabled="@string.IsNullOrWhiteSpace(_newPosition)" @onclick="CreatePositionAsync">@L["Añadir"]</button>
+                </div>
+            </label>
+        </div>
+        <div class="field-row">
+            <label class="field">@L["Temario de cinturón"]
+                <select @bind="_t.CurriculumBelt">
+                    <option value="">@L["Ninguno"]</option>
+                    @foreach (var b in Enum.GetValues<Belt>()) { <option value="@b">@Labels.Of(b)</option> }
+                </select>
+            </label>
+            <label class="field">@L["Progreso"]
+                <select @bind="_t.Progress">
+                    @foreach (var p in Enum.GetValues<ProgressStatus>()) { <option value="@p">@Labels.Of(p)</option> }
+                </select>
+            </label>
+        </div>
+        <label class="field">@L["Etiquetas (separadas por comas)"]<input @bind="Tags" placeholder="@L["gi, presión, favorita"]" /></label>
+        <label class="field">@L["Descripción"]<textarea @bind="_t.Description" placeholder="@L["Pasos clave"]"></textarea></label>
+        <label class="field">@L["Notas"]<textarea @bind="_t.Notes" placeholder="@L["Detalles, errores típicos…"]"></textarea></label>
+        <label class="field">@L["Enlaces a vídeos (uno por línea)"]<textarea @bind="Links" placeholder="https://…"></textarea></label>
+    </div>
+
+    @if (_error is not null) { <div class="error">@L[_error]</div> }
+    <div class="form-actions">
+        @if (Id is not null)
+        {
+            <button type="button" class="btn danger" @onclick="DeleteAsync"><Icon Name="trash" />@L["Borrar"]</button>
+        }
+        <button type="button" class="btn primary big-btn" @onclick="SaveAsync"><Icon Name="check" />@L["Guardar técnica"]</button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    /// <summary>Categoría preseleccionada al crear desde la pantalla de una categoría.</summary>
+    [SupplyParameterFromQuery(Name = "cat")] public string? Cat { get; set; }
+
+    private Technique? _t;
+    private string? _newPosition;
+    private string? _error;
+    private bool _confirmDelete;
+
+    private string Tags
+    {
+        get => string.Join(", ", _t!.Tags);
+        set => _t!.Tags = value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList();
+    }
+
+    private string Links
+    {
+        get => string.Join("\n", _t!.Links);
+        set => _t!.Links = value.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList();
+    }
+
+    protected override void OnInitialized()
+    {
+        // Se edita una copia: si se sale sin guardar, la técnica no cambia.
+        _t = Id is { } id
+            ? (Journal.Technique(id) is { } existing ? Journal.Copy(existing) : null)
+            : new Technique { Category = Enum.TryParse<TechniqueCategory>(Cat, out var c) ? c : default };
+        if (_t is null)
+        {
+            Nav.NavigateTo("tecnicas", replace: true);
+        }
+    }
+
+    private async Task CreatePositionAsync()
+    {
+        _t!.PositionId = (await Journal.AddPositionAsync(_newPosition!)).Id;
+        _newPosition = null;
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = await Journal.SaveTechniqueAsync(_t!);
+        if (_error is null)
+        {
+            Toast.Show(L[Id is null ? "Técnica creada" : "Técnica actualizada"]);
+            Nav.NavigateTo($"tecnicas/{_t!.Id}", replace: true);
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (!_confirmDelete)
+        {
+            _confirmDelete = true;
+            _error = L["Pulsa «Borrar» otra vez para confirmar. Las sesiones donde aparece se conservan."];
+            return;
+        }
+
+        await Journal.DeleteAsync(Journal.Technique(Id!.Value)!);
+        Toast.Show(L["Técnica borrada"]);
+        Nav.NavigateTo("tecnicas", replace: true);
+    }
+
+    private void Back() => Nav.NavigateTo(Id is { } id ? $"tecnicas/{id}" : "tecnicas");
+}

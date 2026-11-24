@@ -1,0 +1,104 @@
+@page "/perfil"
+
+<PageTitle>@L["Perfil"] · BJJ Journal</PageTitle>
+
+<div class="view narrow">
+    <div class="view-head">
+        <h1 class="title">@L["Perfil"]</h1>
+        <div class="actions">
+            <a class="round-btn" href="perfil/editar" aria-label="@L["Editar perfil"]" title="@L["Editar perfil"]"><Icon Name="edit" /></a>
+            <a class="round-btn" href="ajustes" aria-label="@L["Ajustes"]" title="@L["Ajustes"]"><Icon Name="settings" /></a>
+        </div>
+    </div>
+
+    <div class="card hero">
+        <div class="profile-top">
+            <div class="avatar-xl">@Initial</div>
+            <div class="profile-name">@_p.DisplayName</div>
+            <div class="profile-level">@L.F("Nivel {0}", _level.Number)</div>
+            <div class="pill-row">
+                <span class="stat-pill"><Icon Name="flame" />@L.N(Stats.Streak(_sessions, Stats.Today), "semana seguida", "semanas seguidas")</span>
+                <span class="stat-pill"><Icon Name="clock" />@Format.Hours(Stats.Hours(_sessions)) h</span>
+            </div>
+        </div>
+
+        <div>
+            <div class="bar" title="@_level.Xp XP"><div class="fill" style="width:@Pct(_level.Progress)"></div></div>
+            <div class="small muted" style="display:flex; justify-content:space-between; margin-top:6px">
+                <span>@_level.Xp XP</span>
+                <span>@L.F("{0} XP para el nivel {1}", _level.NextXp - _level.Xp, _level.Number + 1)</span>
+            </div>
+        </div>
+
+        <div class="belt-wide" style="background:@Labels.BeltColor(_p.Belt); color:@(_p.Belt == Belt.White ? "#111" : "#fff")">
+            @Labels.Of(_p.Belt).ToUpperInvariant()
+            <div class="tip" style="background:@(_p.Belt == Belt.Black ? "#dc2626" : "#111")">
+                @for (var i = 0; i < _p.Stripes; i++) { <span></span> }
+            </div>
+        </div>
+
+        <div class="facts">
+            @if (!string.IsNullOrWhiteSpace(_p.GymName))
+            {
+                <div class="fact"><div class="label">@L["Gimnasio / academia"]</div><div>@_p.GymName</div></div>
+            }
+            @if (_p.StartedTraining is { } since)
+            {
+                <div class="fact"><div class="label">@L["Entrena desde"]</div><div>@since.ToString("MMMM yyyy") · @Since(since)</div></div>
+            }
+        </div>
+
+        <div class="counters">
+            <a class="counter" href="sesiones"><div class="ring"><Icon Name="calendar" /></div><b>@_sessions.Count</b><span>@L["Sesiones"]</span></a>
+            <div class="counter"><div class="ring"><Icon Name="swords" /></div><b>@_sessions.Sum(s => s.Rolls.Count)</b><span>@L["Rolls"]</span></div>
+            <a class="counter" href="sumisiones"><div class="ring"><Icon Name="target" /></div><b>@_sessions.Sum(s => s.Count(RollEventKind.SubmissionFor))</b><span>@L["Sumisiones"]</span></a>
+        </div>
+    </div>
+
+    <div class="radar-pair">
+        <a class="card" href="sumisiones" style="color:inherit">
+            <h2>@L["Sumisiones"]</h2>
+            <RadarChart Axes="@SubmissionAxes" Color="#f87171" AriaLabel="@L["Sumisiones"]" />
+        </a>
+        <div class="card">
+            <h2>@L["Sesiones"]</h2>
+            <RadarChart Axes="@SessionAxes" Color="#38bdf8" AriaLabel="@L["Sesiones"]" />
+        </div>
+    </div>
+</div>
+
+@code {
+    private UserProfile _p = new();
+    private List<TrainingSession> _sessions = [];
+    private Level _level = Stats.LevelFor(0);
+
+    private string Initial => string.IsNullOrWhiteSpace(_p.DisplayName) ? "?" : _p.DisplayName.Trim()[..1].ToUpperInvariant();
+
+    private List<RadarChart.Axis> SubmissionAxes =>
+        Stats.Submissions(Journal, _sessions, RollEventKind.SubmissionFor).Items.Take(6).Select(x => new RadarChart.Axis(x.Name, x.Count)).ToList();
+
+    private List<RadarChart.Axis> SessionAxes =>
+    [
+        new(L["Gi"], _sessions.Count(s => s.Attire == Attire.Gi)),
+        new(L["Clase"], _sessions.Count(s => s.Type is SessionType.Class or SessionType.Private)),
+        new(L["Open mat"], _sessions.Count(s => s.Type == SessionType.OpenMat)),
+        new(L["No-gi"], _sessions.Count(s => s.Attire == Attire.NoGi)),
+        new(L["Drilling"], _sessions.Count(s => s.Type == SessionType.Drilling)),
+        new(L["Competición"], _sessions.Count(s => s.Type == SessionType.Competition)),
+    ];
+
+    protected override void OnInitialized()
+    {
+        _p = Journal.Data.Profile ?? new UserProfile();
+        _sessions = Journal.Sessions.ToList();
+        _level = Stats.LevelFor(Stats.Experience(_sessions));
+    }
+
+    private static string Pct(double v) => (Math.Clamp(v, 0, 1) * 100).ToString("0.#", CultureInfo.InvariantCulture) + "%";
+
+    private string Since(DateOnly since)
+    {
+        var months = ((DateTime.Today.Year - since.Year) * 12) + DateTime.Today.Month - since.Month;
+        return months < 12 ? L.N(Math.Max(months, 0), "mes", "meses") : L.N(months / 12, "año", "años");
+    }
+}
