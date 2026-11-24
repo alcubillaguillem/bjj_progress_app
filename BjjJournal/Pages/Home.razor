@@ -1,0 +1,213 @@
+@page "/"
+
+<PageTitle>@L["Inicio"] · BJJ Journal</PageTitle>
+
+<div class="view">
+    <div class="view-head">
+        <div>
+            <div class="label">@L.F("Hola, {0}", Journal.Data.Profile?.DisplayName ?? "")</div>
+            <h1 class="title">@L["Inicio"]</h1>
+        </div>
+        <a class="btn pill" href="sesiones/nueva"><Icon Name="plus" />@L["Sesión"]</a>
+    </div>
+
+    <div class="grid-2">
+        <div class="card hero">
+            <div class="label">@L["Racha actual"]</div>
+            <div class="hero-row">
+                <div class="huge">@_streak<span>@L[_streak == 1 ? "semana" : "semanas"]</span></div>
+                <span class="accent"><Icon Name="flame" /></span>
+            </div>
+            <div class="small muted">
+                @if (_thisWeek.Count == 0 && _streak > 0)
+                {
+                    @L["Entrena esta semana para no perder la racha."]
+                }
+                else if (_streak == 0)
+                {
+                    @L["Semanas seguidas con al menos una sesión."]
+                }
+                else
+                {
+                    @L["Esta semana ya has entrenado. Sigue así."]
+                }
+            </div>
+        </div>
+        <div class="kpi-grid">
+            <div class="kpi"><div class="label">@L["Esta semana"]</div><div class="kpi-num">@_thisWeek.Count<small>@L["ses."]</small></div></div>
+            <div class="kpi"><div class="label">@L["Horas semana"]</div><div class="kpi-num">@Format.Hours(Stats.Hours(_thisWeek))<small>h</small></div></div>
+            <div class="kpi"><div class="label">@L["Total sesiones"]</div><div class="kpi-num">@_sessions.Count</div></div>
+            <div class="kpi"><div class="label">@L["Horas en el tapiz"]</div><div class="kpi-num">@Format.Hours(Stats.Hours(_sessions))<small>h</small></div></div>
+        </div>
+    </div>
+
+    @if (_sessions.LastOrDefault() is { } last)
+    {
+        <div class="card list-card">
+            <h2>@L["Última sesión"] · @Format.Relative(last.StartedAt)</h2>
+            <div class="list"><SessionRow Session="last" /></div>
+        </div>
+    }
+    else
+    {
+        <div class="card empty">
+            @L["Aún no has registrado sesiones."]<br /><br />
+            <a class="btn primary" href="sesiones/nueva"><Icon Name="plus" />@L["Registrar la primera"]</a>
+        </div>
+    }
+
+    <div class="grid-2">
+        <div class="card">
+            <div class="card-head">
+                <h2>@L["Por semana"]</h2>
+                <div class="segmented" style="width:auto">
+                    <button type="button" class="@(_hours ? "" : "on")" @onclick="() => _hours = false">@L["Sesiones"]</button>
+                    <button type="button" class="@(_hours ? "on" : "")" @onclick="() => _hours = true">@L["Horas"]</button>
+                </div>
+            </div>
+            <BarChart Values="@(_weekly.Select(w => _hours ? w.Hours : w.Sessions).ToList())"
+                      Labels="@(_weekly.Select(w => Format.WeekLabel(w.Week)).ToList())"
+                      ValueLabel="@(v => _hours ? Format.Hours(v) : v.ToString("0"))"
+                      AriaLabel="@L["Sesiones u horas por semana, últimas 12 semanas"]" />
+            <div class="small muted">@L["Últimas 12 semanas. La barra de la derecha es la semana actual."]</div>
+        </div>
+
+        <div class="card">
+            <div class="card-head"><h2>@L["Satisfacción"]</h2><span class="small muted">@L["media móvil 4 semanas"]</span></div>
+            @if (_trend.All(p => p.Average is null))
+            {
+                <div class="empty">@L["Sin datos todavía."]</div>
+            }
+            else
+            {
+                <LineChart Values="@(_trend.Select(p => p.Average).ToList())"
+                           Labels="@(_trend.Select(p => Format.WeekLabel(p.Week)).ToList())"
+                           AriaLabel="@L["Satisfacción media móvil de 4 semanas"]" />
+            }
+        </div>
+
+        <div class="card">
+            <h2>@L["Técnicas más trabajadas"]</h2>
+            @if (_top.Count == 0)
+            {
+                <div class="empty">@L["Añade técnicas a tus sesiones para verlas aquí."]</div>
+            }
+            else
+            {
+                var max = _top.Max(t => t.Count);
+                <div class="hbar-rows">
+                    @foreach (var (t, count) in _top)
+                    {
+                        <a class="hbar-row" href="tecnicas/@t.Id" style="color:inherit">
+                            <div class="row-top"><span><span class="dot" style="background:@Labels.CategoryColor(t.Category)"></span> @t.Name</span><span class="n">@count</span></div>
+                            <div class="bar"><div class="fill" style="width:@Pct(count, max); background:@Labels.CategoryColor(t.Category)"></div></div>
+                        </a>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="card">
+            <div class="card-head"><h2><a href="sumisiones" style="color:inherit">@L["Sumisiones"] <Icon Name="right" /></a></h2><span class="small"><span class="accent">● @L["a favor"]</span> <span class="danger-text">● @L["en contra"]</span></span></div>
+            @if (_subs.Count == 0)
+            {
+                <div class="empty">@L["Registra rolls con sumisiones para ver este gráfico."]</div>
+            }
+            else
+            {
+                var max = _subs.Max(s => s.For + s.Against);
+                <div class="hbar-rows">
+                    @foreach (var s in _subs.Take(10))
+                    {
+                        <div class="hbar-row">
+                            <div class="row-top"><span>@L[s.Name]</span><span class="n"><span class="accent">@s.For</span> · <span class="danger-text">@s.Against</span></span></div>
+                            <div class="duo">
+                                @if (s.For > 0) { <span class="for" style="width:@Pct(s.For, max)"></span> }
+                                @if (s.Against > 0) { <span class="against" style="width:@Pct(s.Against, max)"></span> }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="card">
+            <h2>Gi / No-gi</h2>
+            <DonutChart Slices="@AttireSlices" AriaLabel="@L["Reparto gi y no-gi"]" />
+        </div>
+
+        <div class="card">
+            <h2>@L["Tipo de sesión"]</h2>
+            <DonutChart Slices="@TypeSlices" AriaLabel="@L["Reparto por tipo de sesión"]" />
+        </div>
+    </div>
+
+    @if (_gaps.Categories.Count > 0 || _gaps.Positions.Count > 0)
+    {
+        <div class="card">
+            <div class="card-head"><h2><span class="accent"><Icon Name="alert" /></span> @L["Lagunas del juego"]</h2><span class="small muted">@L["sin trabajar en 30 días"]</span></div>
+            @if (_gaps.Categories.Count > 0)
+            {
+                <div class="label" style="margin-bottom:6px">@L["Categorías"]</div>
+                <div class="chips" style="margin-bottom:12px">
+                    @foreach (var c in _gaps.Categories)
+                    {
+                        <a class="chip" href="tecnicas/categoria/@Labels.Slug(c)"><span class="dot" style="background:@Labels.CategoryColor(c)"></span>@Labels.Of(c)</a>
+                    }
+                </div>
+            }
+            @if (_gaps.Positions.Count > 0)
+            {
+                <div class="label" style="margin-bottom:6px">@L["Posiciones"]</div>
+                <div class="chips">
+                    @foreach (var p in _gaps.Positions.Take(_allGaps ? int.MaxValue : 12))
+                    {
+                        <span class="chip">@p</span>
+                    }
+                    @if (!_allGaps && _gaps.Positions.Count > 12)
+                    {
+                        <button class="chip" @onclick="() => _allGaps = true">+@(_gaps.Positions.Count - 12) @L["más"]</button>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private static readonly string[] Palette = ["var(--series-1)", "var(--series-2)", "#f472b6", "#fdba74", "#a78bfa"];
+
+    private bool _hours;
+    private bool _allGaps;
+
+    private List<TrainingSession> _sessions = [];
+    private List<TrainingSession> _thisWeek = [];
+    private int _streak;
+    private List<WeekPoint> _weekly = [];
+    private List<(DateOnly Week, double? Average)> _trend = [];
+    private List<(Technique Technique, int Count)> _top = [];
+    private List<(string Name, int For, int Against)> _subs = [];
+    private (List<TechniqueCategory> Categories, List<string> Positions) _gaps;
+
+    private List<DonutChart.Slice> AttireSlices =>
+        Enum.GetValues<Attire>().Select((a, i) => new DonutChart.Slice(Labels.Of(a), _sessions.Count(s => s.Attire == a), Palette[i])).ToList();
+
+    private List<DonutChart.Slice> TypeSlices =>
+        Enum.GetValues<SessionType>().Select((t, i) => new DonutChart.Slice(Labels.Of(t), _sessions.Count(s => s.Type == t), Palette[i % Palette.Length])).ToList();
+
+    protected override void OnInitialized()
+    {
+        var today = Stats.Today;
+        _sessions = Journal.Sessions.OrderBy(s => s.StartedAt).ToList();
+        _thisWeek = _sessions.Where(s => Stats.WeekStart(s.Day) == Stats.WeekStart(today)).ToList();
+        _streak = Stats.Streak(_sessions, today);
+        _weekly = Stats.Weekly(_sessions, today);
+        _trend = Stats.SatisfactionTrend(_sessions, today);
+        _top = Stats.TopTechniques(Journal);
+        _subs = Stats.SubmissionsByTechnique(Journal);
+        _gaps = Stats.Gaps(Journal, today);
+    }
+
+    private static string Pct(int value, int max) =>
+        (max == 0 ? 0 : 100.0 * value / max).ToString("0.#", CultureInfo.InvariantCulture) + "%";
+}

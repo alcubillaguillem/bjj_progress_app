@@ -4,77 +4,51 @@ Diario de entrenamiento de jiu-jitsu brasileño. Trabajo final de C#.
 
 **App:** https://alcubillaguillem.github.io/bjj_progress_app/
 
-App web instalable (PWA) hecha íntegramente en C# con **.NET 10 + Blazor WebAssembly**. Funciona en el ordenador y en el móvil, sin conexión, con los datos guardados en el propio dispositivo. Mismo enfoque y estilo visual que *Control Finanzas* (gastos-erasmus): barra inferior en el móvil, menú lateral en pantallas de 900 px o más, tema oscuro con acento lima.
+App web instalable (PWA) hecha en C# con **.NET 10 + Blazor WebAssembly**. Funciona en el ordenador y en el móvil, sin conexión. Los datos se guardan en el navegador y, si inicias sesión, se sincronizan con Supabase.
 
-## Qué hace (fase 1 + parte de la 2)
+## Qué hace
 
 | Función | Dónde |
 | --- | --- |
-| Onboarding de 3 pasos (nombre, cinturón y grados, semilla de técnicas) | `/bienvenida` |
-| Biblioteca de técnicas: CRUD, categorías, posición, etiquetas, notas, enlaces, veces trabajada | `/tecnicas` |
-| Búsqueda sin tildes ni mayúsculas por nombre, posición, etiqueta o notas; filtros por categoría, posición y etiqueta | `/tecnicas` |
-| Registro de sesión en 2 toques desde cualquier pantalla (+), con valores por defecto de la última sesión | `/sesiones/nueva` |
-| Técnicas trabajadas con foco, creación de técnica nueva sin salir del formulario | formulario de sesión |
-| Rolls con compañero, cinturón, duración y eventos (sumisión a favor/en contra, barrida, pase, escape) | formulario de sesión |
-| Filtros de sesiones por fechas, tipo, gi/no-gi y satisfacción | `/sesiones` |
-| Dashboard con las 6 métricas de F5 + lagunas del juego (30 días) | `/` |
-| Checklist por cinturón con barra de progreso (plantilla blanco y azul) | `/cinturon` |
-| Perfil: nivel por experiencia, cinturón, contadores y radares de sumisiones y sesiones | `/perfil` |
-| Sumisiones por mes o histórico: radar, ranking con %, a favor/en contra, con o sin posición | `/sumisiones` |
-| Exportar/importar JSON versionado, con revisión de duplicados y fusionar o reemplazar | `/ajustes` |
-| Tema oscuro (por defecto) y claro; idioma español o inglés | `/ajustes` |
-| Datos de ejemplo: un año de entrenamiento (`samples/demo-journal.json`, generador en `tools/`) | Ajustes › Importar |
+| Bienvenida en 3 pasos (nombre, cinturón, técnicas de ejemplo) | `/bienvenida` |
+| Inicio: racha, horas, gráficas por semana, técnicas más trabajadas, sumisiones, lagunas del juego | `/` |
+| Sesiones en calendario; registrar con técnicas, rolls y eventos (sumisión, barrida, pase, escape) | `/sesiones` |
+| Biblioteca de técnicas por categoría, búsqueda sin tildes, progreso, etiquetas, enlaces | `/tecnicas` |
+| Checklist por cinturón | `/cinturon` |
+| Perfil con nivel por experiencia y radares; ranking de sumisiones por mes | `/perfil`, `/sumisiones` |
+| Cuenta (correo o Google) y sincronización; copia JSON; tema claro/oscuro; español/inglés | `/acceso`, `/ajustes` |
 
-## Cuentas y sincronización
-
-Inicio de sesión con correo y contraseña o con Google (Supabase Auth, proyecto `bjj-journal`). Con cuenta, el diario se sincroniza con la tabla `public.bjj_journals` (un documento JSON por usuario, protegido con RLS; ver `supabase/001_bjj_journals.sql`). La fusión es entidad a entidad y gana el `UpdatedAt` más reciente. Sin cuenta, la app sigue funcionando solo en local.
-
-- Cliente HTTP propio en C# (`Infrastructure/Supabase`), sin SDK de JavaScript.
-- Configuración en `src/BjjJournal.App/wwwroot/appsettings.json` (URL y clave publicable, que es pública por diseño).
-
-## Arquitectura
+## Estructura
 
 ```
-src/
-  BjjJournal.Domain/          entidades, enums, Result<T>, reglas (sin paquetes NuGet)
-  BjjJournal.Application/     servicios (casos de uso), DTOs, IAppDataStore, semilla
-  BjjJournal.Infrastructure/  LocalStorageDataStore (localStorage vía JS interop)
-  BjjJournal.App/             Blazor WebAssembly: páginas, componentes, gráficos SVG
-tests/
-  BjjJournal.Domain.Tests/       reglas de dominio y normalización de texto
-  BjjJournal.Application.Tests/  casos de uso y métricas con FakeTimeProvider
+BjjJournal/                 la app (un solo proyecto)
+  Program.cs                arranque: idioma y servicios
+  App.razor                 rutas
+  Models/
+    Models.cs               todas las clases de datos y enums
+    SeedData.cs             técnicas y posiciones de ejemplo
+  Services/
+    Journal.cs              el diario: cargar, guardar, validar, buscar, importar/exportar
+    Stats.cs                cálculos de estadísticas
+    Cloud.cs                cuenta y sincronización con Supabase
+  Pages/                    una página por pantalla (.razor)
+  Components/               piezas reutilizables: gráficas SVG, tarjetas, menú, avisos
+  Ui/                       textos (español/inglés), nombres y colores, formato de fechas
+  wwwroot/                  index.html, CSS, iconos, fuentes y bjj.js (localStorage)
+BjjJournal.Tests/           tests xUnit de Journal, Stats y Cloud
+samples/demo-journal.json   un año de datos de ejemplo (Ajustes › Importar)
+supabase/                   SQL de la tabla en la nube
 ```
 
-- App → Application + Infrastructure; Infrastructure → Application; Application → Domain; Domain → nada.
-- Las páginas solo llaman a servicios de Application, que devuelven DTOs.
-- Hora vía `TimeProvider` inyectado; fechas en UTC y conversión a hora local solo en la UI.
-- Ids `Guid` generados en el cliente, `UpdatedAt` e `IsDeleted` en todas las entidades: preparado para sincronizar en la fase 3.
-- Los gráficos (barras, línea, donut) se generan como SVG en componentes Razor. El único JavaScript es `wwwroot/js/bjj.js` (localStorage, descarga de ficheros y tema).
-
-### Cambios respecto al documento de contexto
-
-| Contexto | Implementado | Motivo |
-| --- | --- | --- |
-| .NET MAUI | Blazor WebAssembly PWA | Que sea como Control Finanzas: web instalable en móvil y PC, sin tiendas ni compilar por plataforma |
-| SQLite + EF Core | JSON en localStorage (`IAppDataStore`) | EF Core + SQLite en WebAssembly es frágil; la interfaz permite cambiarlo sin tocar Application |
-| LiveCharts2 / SkiaSharp | SVG propio en Razor | Sin dependencias, respeta el tema claro/oscuro |
-| `.resx` | Textos en `Ui/Labels.cs` | Pendiente si se quiere multidioma |
+Cómo encaja: las páginas leen y guardan a través de `Journal`. `Journal` mantiene el diario en memoria (`AppData`) y lo guarda como JSON en localStorage tras cada cambio. `Cloud` escucha esos cambios y, si hay sesión, sube y baja el diario de Supabase (gana el cambio más reciente). `Stats` solo calcula.
 
 ## Ejecutar
 
 Requiere el SDK de .NET 10.
 
 ```bash
-dotnet test                              # 90 tests
-dotnet run --project src/BjjJournal.App  # abre la URL que muestra la consola
+dotnet test                          # tests
+dotnet run --project BjjJournal      # abre la URL que muestra la consola
 ```
 
-En el móvil: abrir la URL publicada y «Añadir a pantalla de inicio».
-
-## Publicar en GitHub Pages
-
-Sube el repositorio a GitHub, activa *Settings → Pages → Source: GitHub Actions* y haz push a `main`. El workflow `.github/workflows/pages.yml` pasa los tests, publica y ajusta el `base href` al nombre del repositorio.
-
-## Siguiente (fase 2)
-
-Mapa de técnicas (grafo), sistemas (diagramas de flujo), informe semanal, fotos, importar técnicas desde texto y exportar CSV.
+Cada push a `main` pasa los tests y publica en GitHub Pages (`.github/workflows/pages.yml`).

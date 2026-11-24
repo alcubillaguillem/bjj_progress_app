@@ -1,0 +1,93 @@
+@page "/tecnicas/{Id:guid}"
+
+<PageTitle>@(_t?.Name ?? L["Técnica"]) · BJJ Journal</PageTitle>
+
+@if (_t is null)
+{
+    <div class="card empty">@L["Esta técnica no existe."] <a href="tecnicas">@L["Ver técnicas"]</a></div>
+    return;
+}
+
+<div class="view narrow">
+    <div class="view-head">
+        <div class="back-row">
+            <a class="round-btn" aria-label="@L["Volver"]" href="tecnicas"><Icon Name="left" /></a>
+            <h1 class="subtitle">@_t.Name</h1>
+        </div>
+        <a class="btn small" href="tecnicas/@_t.Id/editar"><Icon Name="edit" />@L["Editar"]</a>
+    </div>
+
+    <div class="chips">
+        <span class="chip on"><span class="dot" style="background:@Labels.CategoryColor(_t.Category)"></span>@Labels.Of(_t.Category)</span>
+        @if (Journal.PositionName(_t.PositionId) is { } position) { <span class="chip">@position</span> }
+        @if (_t.CurriculumBelt is { } belt) { <span class="chip"><span class="belt-chip" style="background:@Labels.BeltColor(belt); width:22px"></span>Temario @Labels.Of(belt).ToLowerInvariant()</span> }
+        @foreach (var tag in _t.Tags) { <span class="tag accent">#@tag</span> }
+    </div>
+
+    <div class="kpi-grid kpi-4">
+        <div class="kpi"><div class="label">@L["Veces trabajada"]</div><div class="kpi-num">@_sessions.Count</div></div>
+        <div class="kpi"><div class="label">@L["Última sesión"]</div><div class="kpi-num" style="font-size:18px">@(_sessions.Count > 0 ? Format.Relative(_sessions[0].StartedAt) : "—")</div></div>
+        <div class="kpi"><div class="label">@L["Sumisiones a favor"]</div><div class="kpi-num accent">@Count(RollEventKind.SubmissionFor)</div></div>
+        <div class="kpi"><div class="label">@L["En contra"]</div><div class="kpi-num danger-text">@Count(RollEventKind.SubmissionAgainst)</div></div>
+    </div>
+
+    <div class="card">
+        <h2>@L["Progreso"]</h2>
+        <Segmented TValue="ProgressStatus" Value="_t.Progress" ValueChanged="SetProgressAsync" Label="Labels.Of" />
+    </div>
+
+    @if (_t.Description is not null)
+    {
+        <div class="card"><h2>@L["Descripción"]</h2><p class="notes">@_t.Description</p></div>
+    }
+    @if (_t.Notes is not null)
+    {
+        <div class="card"><h2>@L["Notas"]</h2><p class="notes">@_t.Notes</p></div>
+    }
+    @if (_t.Links.Count > 0)
+    {
+        <div class="card">
+            <h2>@L["Enlaces"]</h2>
+            <div class="links">
+                @foreach (var link in _t.Links)
+                {
+                    <a href="@link" target="_blank" rel="noopener noreferrer"><Icon Name="link" /> @link</a>
+                }
+            </div>
+        </div>
+    }
+
+    <div class="card list-card">
+        <h2>@L["Sesiones recientes"]</h2>
+        @if (_sessions.Count == 0)
+        {
+            <div class="empty">@L["Todavía no la has trabajado en ninguna sesión."]</div>
+        }
+        <div class="list">
+            @foreach (var s in _sessions.Take(5)) { <SessionRow Session="s" /> }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private Technique? _t;
+    private List<TrainingSession> _sessions = [];
+
+    /// <summary>Sumisiones con esta técnica, a favor o en contra.</summary>
+    private int Count(RollEventKind kind) => Journal.Sessions.SelectMany(s => s.Events).Count(e => e.TechniqueId == Id && e.Kind == kind);
+
+    protected override void OnParametersSet()
+    {
+        _t = Journal.Technique(Id);
+        _sessions = Journal.Sessions.Where(s => s.TechniqueIds().Contains(Id)).OrderByDescending(s => s.StartedAt).ToList();
+    }
+
+    private async Task SetProgressAsync(ProgressStatus progress)
+    {
+        _t!.Progress = progress;
+        await Journal.SaveTechniqueAsync(_t);
+        Toast.Show($"{L["Progreso"]}: {Labels.Of(progress)}");
+    }
+}

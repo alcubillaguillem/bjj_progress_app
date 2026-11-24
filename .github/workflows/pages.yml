@@ -17,7 +17,7 @@ jobs:
         with:
           dotnet-version: 10.0.x
       - run: dotnet test
-      - run: dotnet publish src/BjjJournal.App -c Release -o out
+      - run: dotnet publish BjjJournal -c Release -o out
       - name: Ajustar base href y fallback de rutas
         run: |
           sed -i 's#<base href="/" />#<base href="/${{ github.event.repository.name }}/" />#' out/wwwroot/index.html

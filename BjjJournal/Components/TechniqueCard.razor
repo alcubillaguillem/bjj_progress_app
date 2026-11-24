@@ -1,0 +1,21 @@
+@* Tarjeta de técnica: categoría, posición, progreso en 4 pasos y uso. *@
+<a class="t-card" href="tecnicas/@T.Id" style="--c:@Labels.CategoryColor(T.Category)">
+    <span class="t-ic"><Icon Name="@Labels.CategoryIcon(T.Category)" /></span>
+    <span class="t-body">
+        <span class="t-name">@T.Name</span>
+        <span class="t-pos">@(Journal.PositionName(T.PositionId) ?? L["Sin posición"])@if (ShowCategory) { <text> · @Labels.Of(T.Category)</text> }</span>
+        <span class="t-foot">
+            <span class="t-meter" title="@Labels.Of(T.Progress)">
+                @for (var i = 1; i <= 3; i++) { <i class="@((int)T.Progress >= i ? "on" : "")"></i> }
+            </span>
+            <span class="t-prog">@Labels.Of(T.Progress)</span>
+            <span class="t-use">@(Use.Count == 0 ? L["sin usar"] : $"{L.N(Use.Count, "vez", "veces")} · {Format.Relative(Use.Last)}")</span>
+        </span>
+    </span>
+</a>
+
+@code {
+    [Parameter, EditorRequired] public Technique T { get; set; } = default!;
+    [Parameter, EditorRequired] public (int Count, DateTimeOffset Last) Use { get; set; }
+    [Parameter] public bool ShowCategory { get; set; }
+}

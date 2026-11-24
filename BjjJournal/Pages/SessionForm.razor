@@ -1,0 +1,210 @@
+@page "/sesiones/nueva"
+@page "/sesiones/{Id:guid}/editar"
+@inject NavigationManager Nav
+
+<PageTitle>@L[Id is null ? "Nueva sesión" : "Editar sesión"] · BJJ Journal</PageTitle>
+
+@if (_s is null)
+{
+    return;
+}
+
+<div class="view narrow">
+    <div class="back-row">
+        <button class="round-btn" aria-label="@L["Volver"]" @onclick="Back"><Icon Name="left" /></button>
+        <h1 class="subtitle">@L[Id is null ? "Nueva sesión" : "Editar sesión"]</h1>
+    </div>
+
+    <div class="card form">
+        <div class="field-row">
+            <label class="field">@L["Fecha y hora"]<input type="datetime-local" @bind="_local" /></label>
+            <div class="field">@L["Duración (min)"]
+                <div class="stepper">
+                    <button type="button" class="round-btn" aria-label="@L["Menos"]" @onclick="() => _s.DurationMinutes = Math.Max(5, _s.DurationMinutes - 15)">–</button>
+                    <input type="number" inputmode="numeric" min="1" @bind="_s.DurationMinutes" />
+                    <button type="button" class="round-btn" aria-label="@L["Más"]" @onclick="() => _s.DurationMinutes += 15">+</button>
+                </div>
+            </div>
+        </div>
+        <div class="field">@L["Tipo"]
+            <div class="chips">
+                @foreach (var t in Enum.GetValues<SessionType>())
+                {
+                    var type = t;
+                    <button type="button" class="chip @(_s.Type == type ? "on" : "")" @onclick="() => _s.Type = type">@Labels.Of(type)</button>
+                }
+            </div>
+        </div>
+        <div class="field">@L["Gi / No-gi"]
+            <Segmented TValue="Attire" @bind-Value="_s.Attire" Label="Labels.Of" />
+        </div>
+        <button type="button" class="btn primary big-btn" @onclick="SaveAsync"><Icon Name="check" />@L["Guardar sesión"]</button>
+        <div class="small muted">@L["Con esto basta. Lo de abajo es opcional."]</div>
+    </div>
+
+    <div class="card form">
+        <h2>@L["Cómo fue"]</h2>
+        <SatisfactionPicker @bind-Value="_s.Satisfaction" />
+        <label class="field">@L["Lugar"]<input @bind="_s.Location" placeholder="@L["Gimnasio, open mat…"]" /></label>
+        <label class="field">@L["Notas"]<textarea @bind="_s.Notes" placeholder="@L["Qué aprendiste, qué falló, detalles que no quieres olvidar…"]"></textarea></label>
+    </div>
+
+    <div class="card form">
+        <div class="card-head"><h2>@L["Técnicas trabajadas"]</h2><span class="small muted">@_s.Techniques.Count</span></div>
+        @if (_s.Techniques.Count > 0)
+        {
+            <div class="picked">
+                @foreach (var st in _s.Techniques)
+                {
+                    var item = st;
+                    <div class="picked-row">
+                        <span class="dot" style="background:@Color(item.TechniqueId)"></span>
+                        <span class="name">@Name(item.TechniqueId)</span>
+                        <select @bind="item.Focus" aria-label="@L["Foco"]">
+                            @foreach (var f in Enum.GetValues<TechniqueFocus>()) { <option value="@f">@Labels.Of(f)</option> }
+                        </select>
+                        <button type="button" class="icon-btn" aria-label="@L["Quitar"]" @onclick="() => _s.Techniques.Remove(item)"><Icon Name="x" /></button>
+                    </div>
+                }
+            </div>
+        }
+        <TechniquePicker Exclude="@(_s.Techniques.Select(t => t.TechniqueId).ToList())" OnPick="AddTechnique" />
+    </div>
+
+    <div class="card form">
+        <div class="card-head"><h2>@L["Rolls"]</h2><span class="small muted">@SubsFor @L["a favor"] · @SubsAgainst @L["en contra"]</span></div>
+        @for (var r = 0; r < _s.Rolls.Count; r++)
+        {
+            var roll = _s.Rolls[r];
+            var n = r + 1;
+            <div class="sub-card">
+                <div class="roll-head">
+                    <strong>@L["Roll"] @n</strong>
+                    <button type="button" class="icon-btn" aria-label="@L["Quitar roll"]" @onclick="() => _s.Rolls.Remove(roll)"><Icon Name="trash" /></button>
+                </div>
+                <div class="field-row">
+                    <label class="field">@L["Compañero"]<input @bind="roll.PartnerName" placeholder="@L["Nombre"]" /></label>
+                    <label class="field">@L["Cinturón"]
+                        <select @bind="roll.PartnerBelt">
+                            <option value="">—</option>
+                            @foreach (var b in Enum.GetValues<Belt>()) { <option value="@b">@Labels.Of(b)</option> }
+                        </select>
+                    </label>
+                    <label class="field">@L["Minutos"]<input type="number" inputmode="numeric" min="1" @bind="roll.DurationMinutes" /></label>
+                </div>
+                @foreach (var ev in roll.Events)
+                {
+                    var e = ev;
+                    <div class="event-row">
+                        <select class="ev-kind" @bind="e.Kind" aria-label="@L["Evento"]">
+                            @foreach (var k in Enum.GetValues<RollEventKind>()) { <option value="@k">@Labels.Of(k)</option> }
+                        </select>
+                        <button type="button" class="icon-btn ev-del" aria-label="@L["Quitar evento"]" @onclick="() => roll.Events.Remove(e)"><Icon Name="x" /></button>
+                        <select class="ev-tech" @bind="e.TechniqueId" aria-label="@L["Técnica"]">
+                            <option value="">@L["Técnica…"]</option>
+                            @foreach (var t in AllTechniques) { <option value="@t.Id">@t.Name</option> }
+                        </select>
+                        <select class="ev-pos" @bind="e.PositionId" aria-label="@L["Posición"]">
+                            <option value="">@L["Posición…"]</option>
+                            @foreach (var p in Journal.Positions) { <option value="@p.Id">@p.Name</option> }
+                        </select>
+                    </div>
+                }
+                <div class="chips">
+                    <button type="button" class="chip" @onclick="() => roll.Events.Add(new RollEvent { Kind = RollEventKind.SubmissionFor })"><Icon Name="plus" />@L["Sumisión a favor"]</button>
+                    <button type="button" class="chip" @onclick="() => roll.Events.Add(new RollEvent { Kind = RollEventKind.SubmissionAgainst })"><Icon Name="plus" />@L["En contra"]</button>
+                    <button type="button" class="chip" @onclick="() => roll.Events.Add(new RollEvent { Kind = RollEventKind.SweepFor })"><Icon Name="plus" />@L["Otro evento"]</button>
+                </div>
+            </div>
+        }
+        <button type="button" class="btn" @onclick="AddRoll"><Icon Name="plus" />@L["Añadir roll"]</button>
+    </div>
+
+    @if (_error is not null) { <div class="error">@L[_error]</div> }
+    <div class="form-actions">
+        @if (Id is not null)
+        {
+            <button type="button" class="btn danger" @onclick="DeleteAsync"><Icon Name="trash" />@L["Borrar"]</button>
+        }
+        <button type="button" class="btn primary big-btn" @onclick="SaveAsync"><Icon Name="check" />@L["Guardar sesión"]</button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    /// <summary>Día elegido en el calendario (yyyy-MM-dd) para una sesión nueva.</summary>
+    [SupplyParameterFromQuery(Name = "fecha")] public string? Fecha { get; set; }
+
+    private TrainingSession? _s;
+    private DateTime _local;
+    private string? _error;
+    private bool _confirmDelete;
+
+    private IEnumerable<Technique> AllTechniques => Journal.Techniques.OrderBy(t => t.Name, StringComparer.CurrentCultureIgnoreCase);
+
+    private int SubsFor => _s!.Count(RollEventKind.SubmissionFor);
+    private int SubsAgainst => _s!.Count(RollEventKind.SubmissionAgainst);
+
+    protected override void OnInitialized()
+    {
+        if (Id is { } id)
+        {
+            // Se edita una copia: si se sale sin guardar, la sesión no cambia.
+            _s = Journal.Session(id) is { } existing ? Journal.Copy(existing) : null;
+        }
+        else
+        {
+            _s = Journal.NewSession(DateOnly.TryParseExact(Fecha, "yyyy-MM-dd", out var day) ? day : null);
+        }
+
+        if (_s is null)
+        {
+            Nav.NavigateTo("sesiones", replace: true);
+            return;
+        }
+
+        _local = _s.StartedAt.LocalDateTime;
+    }
+
+    private string Name(Guid id) => Journal.TechniqueName(id) ?? L["Técnica borrada"];
+
+    private string Color(Guid id) => Journal.Technique(id) is { } t ? Labels.CategoryColor(t.Category) : "var(--muted)";
+
+    private void AddTechnique(Guid id)
+    {
+        if (_s!.Techniques.All(t => t.TechniqueId != id))
+        {
+            _s.Techniques.Add(new SessionTechnique { TechniqueId = id });
+        }
+    }
+
+    private void AddRoll() => _s!.Rolls.Add(new Roll { DurationMinutes = _s.Rolls.LastOrDefault()?.DurationMinutes ?? 6 });
+
+    private async Task SaveAsync()
+    {
+        _s!.StartedAt = new DateTimeOffset(_local, TimeZoneInfo.Local.GetUtcOffset(_local));
+        _error = await Journal.SaveSessionAsync(_s);
+        if (_error is null)
+        {
+            Toast.Show(L[Id is null ? "Sesión guardada" : "Sesión actualizada"]);
+            Nav.NavigateTo($"sesiones/{_s.Id}", replace: true);
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (!_confirmDelete)
+        {
+            _confirmDelete = true;
+            _error = L["Pulsa «Borrar» otra vez para confirmar."];
+            return;
+        }
+
+        await Journal.DeleteAsync(Journal.Session(Id!.Value)!);
+        Toast.Show(L["Sesión borrada"]);
+        Nav.NavigateTo("sesiones", replace: true);
+    }
+
+    private void Back() => Nav.NavigateTo(Id is { } id ? $"sesiones/{id}" : "./");
+}
