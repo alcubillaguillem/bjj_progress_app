@@ -42,6 +42,7 @@
             {
                 var items = _all.Where(t => t.Category == c).ToList();
                 <a class="cat-tile @(items.Count == 0 ? "empty-tile" : "")" href="tecnicas/categoria/@Labels.Slug(c)" style="--c:@Labels.CategoryColor(c)">
+                    <img class="cat-img" src="img/categorias/@(Labels.Slug(c)).webp" alt="" />
                     <span class="cat-ic"><Icon Name="@Labels.CategoryIcon(c)" /></span>
                     <span class="cat-name">@Labels.Of(c)</span>
                     <span class="cat-count">@L.N(items.Count, "técnica", "técnicas")</span>
