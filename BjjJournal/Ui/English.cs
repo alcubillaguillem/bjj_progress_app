@@ -342,5 +342,13 @@ internal static class English
         ["aprendiendo"] = "learning",
         ["{0} dominadas o competentes"] = "{0} mastered or competent",
         ["Aún no tienes técnicas en esta categoría."] = "You don't have techniques in this category yet.",
+        ["Entrenando"] = "Training",
+        ["Terminar sesión"] = "Finish session",
+        ["Empezar sesión"] = "Start session",
+        ["¿Qué tal fue la sesión?"] = "How was the session?",
+        ["¿Qué tipo de sesión?"] = "What kind of session?",
+        ["¿Gi o no-gi?"] = "Gi or no-gi?",
+        ["¿Qué técnicas trabajaste?"] = "What techniques did you work on?",
+        ["¿Algo que apuntar?"] = "Anything to note?",
     };
 }

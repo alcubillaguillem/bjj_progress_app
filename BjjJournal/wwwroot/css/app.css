@@ -501,3 +501,12 @@ span.cal-cell { cursor: default; }
 .t-meter i.on { background: var(--c); }
 .t-prog { font-size: 12px; font-weight: 600; color: var(--text-2); }
 .t-use { font-size: 12px; color: var(--muted); margin-left: auto; }
+
+/* Entrenamiento: cronómetro a pantalla completa */
+.training { text-align: center; align-items: stretch; }
+.training .clock { font: 700 22vw/1 var(--num); letter-spacing: -.04em; margin: 12vh 0 6vh; }
+@media (min-width: 600px) { .training .clock { font-size: 120px; } }
+.play-btn { width: 112px; height: 112px; margin: 0 auto; border: 0; border-radius: 50%; background: var(--accent); color: var(--accent-text); display: grid; place-items: center; cursor: pointer; }
+.play-btn .ic { width: 48px; height: 48px; stroke-width: 2.4; }
+.training .stars .big-btn { height: 64px; font-size: 24px; }
+.training textarea { min-height: 120px; }
