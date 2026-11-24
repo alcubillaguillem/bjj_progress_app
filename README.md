@@ -52,3 +52,9 @@ dotnet run --project BjjJournal      # abre la URL que muestra la consola
 ```
 
 Cada push a `main` pasa los tests y publica en GitHub Pages (`.github/workflows/pages.yml`).
+
+## Fotos
+
+Las fotos de las categorías de técnicas (`wwwroot/img/categorias/`) son de dominio público, de Wikimedia Commons:
+Back mount; USMC-110124-M-2306T-163; USMC-110122-M-9595T-067; Jiu-jitsu tournament with local Australians, U.S. Marine 150725-M-BX631-070, -117 y -152;
+Dreadnaughts train in self defense with DPTA Combat Kalaki Team in Oleszno (6828762); Brazilian Jiu-jitsu Kimura lock from guard; Hawaiian State Grappling Championships.
