@@ -2,6 +2,7 @@
 @inject IJSRuntime JS
 @inject NavigationManager Nav
 @inject Cloud Cloud
+@* Pantalla /ajustes: cuenta y sincronización, idioma, tema claro/oscuro y copia de seguridad (exportar/importar JSON). *@
 
 <PageTitle>@L["Ajustes"] · BJJ Journal</PageTitle>
 
@@ -103,8 +104,10 @@
     private int DuplicateTechniques => Journal.DuplicateTechniques(_import!).Count;
     private int DuplicateSessions => _import!.Sessions.Count(s => !s.IsDeleted && Journal.Session(s.Id) != null);
 
+    // Lee el tema guardado en el navegador.
     protected override async Task OnInitializedAsync() => _theme = await JS.InvokeAsync<string>("bjjTheme.get");
 
+    // Guarda el idioma y recarga la app para aplicarlo.
     private async Task SetLangAsync(string lang)
     {
         if (lang != L.Lang)
@@ -113,6 +116,7 @@
         }
     }
 
+    // Cambia entre tema claro y oscuro.
     private async Task SetThemeAsync(string theme)
     {
         _theme = theme;
@@ -121,6 +125,7 @@
 
     private async Task SyncNowAsync() => Toast.Show(L[await Cloud.SyncAsync() ?? "Sincronizado"]);
 
+    // Cierra sesión (pide confirmar: borra los datos de este dispositivo).
     private async Task SignOutAsync()
     {
         if (!_confirmSignOut)
@@ -133,6 +138,7 @@
         Nav.NavigateTo("acceso", forceLoad: true);
     }
 
+    // Descarga el diario como JSON (copia de seguridad).
     private async Task ExportAsync()
     {
         await JS.InvokeVoidAsync("bjjFiles.download", $"bjj-journal-{DateTime.Now:yyyy-MM-dd}.json", "application/json", Journal.Export());
@@ -153,6 +159,7 @@
         _import = data;
     }
 
+    // Importa la copia: fusionar con lo que hay o reemplazarlo todo.
     private async Task ImportAsync(bool replace)
     {
         await Journal.ImportAsync(_import!, replace);

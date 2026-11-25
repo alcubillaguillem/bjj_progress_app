@@ -1,4 +1,5 @@
 @page "/perfil"
+@* Pantalla /perfil: nivel por experiencia, radares por categoría y resumen de tu entrenamiento. *@
 
 <PageTitle>@L["Perfil"] · BJJ Journal</PageTitle>
 
@@ -87,6 +88,7 @@
         new(L["Competición"], _sessions.Count(s => s.Type == SessionType.Competition)),
     ];
 
+    // Carga el perfil y calcula el nivel a partir de las sesiones.
     protected override void OnInitialized()
     {
         _p = Journal.Data.Profile ?? new UserProfile();

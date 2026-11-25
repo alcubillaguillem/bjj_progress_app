@@ -1,4 +1,6 @@
 @page "/"
+@* Pantalla de inicio (/): racha, horas, gráficas semanales, técnicas más usadas, sumisiones y lagunas.
+   Solo pinta: todos los cálculos están en Services/Stats.cs. *@
 
 <PageTitle>@L["Inicio"] · BJJ Journal</PageTitle>
 
@@ -195,6 +197,7 @@
     private List<DonutChart.Slice> TypeSlices =>
         Enum.GetValues<SessionType>().Select((t, i) => new DonutChart.Slice(Labels.Of(t), _sessions.Count(s => s.Type == t), Palette[i % Palette.Length])).ToList();
 
+    // Calcula una vez todas las estadísticas que muestra la pantalla.
     protected override void OnInitialized()
     {
         var today = Stats.Today;

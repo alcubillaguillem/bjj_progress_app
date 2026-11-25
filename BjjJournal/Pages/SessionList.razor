@@ -1,4 +1,5 @@
 @page "/sesiones"
+@* Pantalla /sesiones: calendario del mes con las sesiones de cada día. *@
 
 <PageTitle>@L["Sesiones"] · BJJ Journal</PageTitle>
 
@@ -86,6 +87,7 @@
     private List<TrainingSession> InMonth =>
         Journal.Sessions.Where(s => s.Day.Year == _month.Year && s.Day.Month == _month.Month).ToList();
 
+    // Sesiones de un día del calendario.
     private List<TrainingSession> OnDay(DateOnly day) => Journal.Sessions.Where(s => s.Day == day).OrderBy(s => s.StartedAt).ToList();
 
     private string MonthName => Format.Capitalize(_month.ToString("MMMM"));
@@ -104,6 +106,7 @@
         _selected = isCurrent ? Stats.Today : InMonth.Select(s => s.Day).DefaultIfEmpty(_month).Max();
     }
 
+    // Vuelve al mes actual.
     private void GoToday()
     {
         _month = new DateOnly(Stats.Today.Year, Stats.Today.Month, 1);

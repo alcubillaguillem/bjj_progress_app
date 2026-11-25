@@ -1,4 +1,5 @@
 @page "/tecnicas"
+@* Pantalla /tecnicas: biblioteca de técnicas en bloques por categoría, con buscador. *@
 
 <PageTitle>@L["Técnicas"] · BJJ Journal</PageTitle>
 
@@ -71,6 +72,7 @@
 
     private (int Count, DateTimeOffset Last) Use(Technique t) => _usage.GetValueOrDefault(t.Id);
 
+    // Ordena las técnicas y cuenta cuántas veces se ha usado cada una.
     protected override void OnInitialized()
     {
         _all = Journal.Techniques.OrderBy(t => t.Name, StringComparer.CurrentCultureIgnoreCase).ToList();

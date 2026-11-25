@@ -1,5 +1,6 @@
 @page "/perfil/editar"
 @inject NavigationManager Nav
+@* Pantalla /perfil/editar: formulario del perfil (nombre, cinturón, grados, gimnasio, fecha de inicio). *@
 
 <PageTitle>@L["Editar perfil"] · BJJ Journal</PageTitle>
 
@@ -36,8 +37,10 @@
     private UserProfile _p = new();
     private string? _error;
 
+    // Trabaja sobre una copia: si cancelas, no se cambia nada.
     protected override void OnInitialized() => _p = Journal.Copy(Journal.Data.Profile ?? new UserProfile());
 
+    // Valida y guarda el perfil.
     private async Task SaveAsync()
     {
         _error = await Journal.SaveProfileAsync(_p);
