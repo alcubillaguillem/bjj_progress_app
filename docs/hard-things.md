@@ -76,3 +76,5 @@ These are the parts of the project that took me the most time or that I found mo
 - **Cloud:** a console program (`tools/TrafficTest`) that does the same requests as a sync with more and more users at the same time, until errors appear or responses take more than 2 seconds.
 
 **What I learned.** The first limit is not speed but **localStorage size**: about 1,500 characters per session, so around 3,300 sessions fit in the 5 million characters a browser allows. That is more than 20 years of training, so it's fine for this app, but it's the first thing to change if the app grew (for example, using IndexedDB).
+
+In the cloud, the real Supabase project handled **5.6 syncs per second** with 5 users at the same time and no errors. With 10 users it didn't go faster, it only got slower (p95 above 3 s). Because each sync moves the whole journal (~300 KB each way), the bottleneck is bandwidth, not the number of requests.

@@ -82,10 +82,32 @@ $env:BJJ_EMAIL="demo@..."; $env:BJJ_PASSWORD="..."; dotnet run --project tools/T
 
 ### Results
 
-_Pending: to be filled in after running it against the real Supabase project._
+Run on 25/11/2026 from my laptop against the real Supabase project (free plan, Frankfurt), with the demo account.
 
-### Expected limits
+- Laptop: Windows 11 Home, Intel Core i7-1355U (10 cores, 12 threads), .NET SDK 10.0.404.
+- Network: Wi-Fi 6 (not cable).
+- Journal size: 301 KB per sync (it goes down and up, so ~600 KB of traffic per sync).
 
-- Supabase free plan: the database runs on a small shared instance, so I expect the limit to be a few dozen syncs per second.
-- Each sync moves the whole journal twice (down and up). With the demo journal (~620 KB) that's about 1.2 MB per sync, so bandwidth matters more than the number of requests.
-- For this app that's more than enough: one user syncs once every few minutes at most, after making changes, and the app waits 1.5 s to group several changes into one sync.
+| Users at the same time | Syncs/s | Average (ms) | p95 (ms) | Errors | CPU (test program) | Memory |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 1.9 | 514 | 1,158 | 0.0 % | 2 % | 72 MB |
+| 2 | 3.3 | 597 | 1,474 | 0.0 % | 1 % | 63 MB |
+| 5 | **5.6** | 868 | 1,431 | 0.0 % | 1 % | 80 MB |
+| 10 | 5.6 | 1,710 | **3,177** | 0.0 % | 0 % | 81 MB |
+
+The test stopped at 10 users because the p95 went above 2 seconds.
+
+**Maximum sustained traffic: 5.6 syncs per second with 5 users at the same time (~3.3 MB/s).**
+
+### What the results mean
+
+- There were **no errors** at any step. Supabase never rejected a request; it just got slower.
+- From 5 to 10 users the syncs per second stay the same (5.6) and only the response time doubles. That means a limit was reached and the extra requests are waiting in a queue.
+- The test program almost didn't use CPU (2 % at most) or memory (~80 MB), so the limit is not my laptop. At the limit the traffic was ~3.3 MB/s, so it's probably the bandwidth (my Wi-Fi upload or the free Supabase instance), not the number of requests.
+- In this app, the cost of a sync depends on the journal size, because each sync moves the whole journal. With a smaller journal more syncs per second would fit; with a bigger one, fewer.
+
+### Is that enough?
+
+Yes, for this app. One user only syncs after making changes, and the app waits 1.5 s to group them, so a normal user does a few syncs per training session. 5.6 syncs per second is more than 20,000 syncs per hour.
+
+If the app had many users, the first things I would change are: upload only the items that changed instead of the whole journal, and compress the JSON. Both reduce the bandwidth, which is the real bottleneck.

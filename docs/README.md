@@ -168,7 +168,7 @@ Demo data: Settings › Import › `samples/demo-journal.json`.
 ## 9. Known limitations and future work
 
 - **localStorage limit**: around 5 million characters per site. With my format that's about 3,300 sessions (more than 20 years training 3 days a week). See [load-tests.md](load-tests.md).
-- Each sync uploads the whole journal. Fine for a personal diary, but it wouldn't scale to very big journals.
+- Each sync uploads the whole journal. The traffic test reached 5.6 syncs per second against Supabase (limit: bandwidth). Fine for a personal diary, but it wouldn't scale to many users or very big journals.
 - Last write wins can lose an edit made on two devices at the same time.
 - The offline service worker doesn't install on GitHub Pages: the workflow changes `index.html` after the build, so its hash no longer matches. The app works, but not offline after the first visit on a new device.
 - Ideas: weekly report, CSV export, a map of positions and transitions.
