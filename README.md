@@ -35,7 +35,9 @@ BjjJournal/                 la app (un solo proyecto)
   Components/               piezas reutilizables: gráficas SVG, tarjetas, menú, avisos
   Ui/                       textos (español/inglés), nombres y colores, formato de fechas
   wwwroot/                  index.html, CSS, iconos, fuentes y bjj.js (localStorage)
-BjjJournal.Tests/           tests xUnit de Journal, Stats y Cloud
+BjjJournal.Tests/           tests xUnit de Journal, Stats, Cloud y carga
+tools/TrafficTest/          prueba de tráfico contra Supabase
+docs/                       documentación (inglés)
 samples/demo-journal.json   un año de datos de ejemplo (Ajustes › Importar)
 supabase/                   SQL de la tabla en la nube
 ```
@@ -52,6 +54,10 @@ dotnet run --project BjjJournal      # abre la URL que muestra la consola
 ```
 
 Cada push a `main` pasa los tests y publica en GitHub Pages (`.github/workflows/pages.yml`).
+
+## Documentación
+
+En inglés, en [`docs/`](docs/README.md): arquitectura, seguridad, tests, [partes difíciles](docs/hard-things.md) y [pruebas de carga y tráfico](docs/load-tests.md).
 
 ## Fotos
 
