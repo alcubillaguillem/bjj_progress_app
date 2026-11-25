@@ -2,6 +2,8 @@
 @layout BareLayout
 @inject Cloud Cloud
 @inject NavigationManager Nav
+@* Pantalla /acceso: entrar o registrarse con correo, entrar con Google o seguir sin cuenta.
+   Toda la lógica de la cuenta está en Services/Cloud.cs. *@
 
 <PageTitle>@L["Acceso"] · BJJ Journal</PageTitle>
 
@@ -45,6 +47,7 @@
 
     [SupplyParameterFromQuery(Name = "error")] public string? QueryError { get; set; }
 
+    // Sin Supabase configurado no hay login: va directo al inicio.
     protected override void OnInitialized()
     {
         if (!Cloud.IsConfigured)
@@ -55,8 +58,10 @@
         _error = QueryError;
     }
 
+    // Va a la página de Google; al volver, MainLayout recoge la sesión.
     private void Google() => Nav.NavigateTo(Cloud.GoogleUrl(Nav.BaseUri), forceLoad: true);
 
+    // Entrar o registrarse con correo y contraseña.
     private async Task SubmitAsync()
     {
         _busy = true;
@@ -94,6 +99,7 @@
         }
     }
 
+    // Envía el correo para cambiar la contraseña.
     private async Task ResetAsync()
     {
         _error = await Cloud.SendPasswordResetAsync(_email, Nav.BaseUri);
@@ -103,6 +109,7 @@
         }
     }
 
+    // Seguir sin cuenta: los datos solo se guardan en este dispositivo.
     private async Task GuestAsync()
     {
         await Cloud.SetGuestAsync();

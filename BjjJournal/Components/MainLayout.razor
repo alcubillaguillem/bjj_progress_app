@@ -2,6 +2,8 @@
 @implements IDisposable
 @inject Cloud Cloud
 @inject NavigationManager Nav
+@* Marco común de la app: menú lateral (PC) o barra inferior (móvil) y el hueco donde va cada página.
+   Al arrancar decide a dónde ir: login, bienvenida o la página pedida. *@
 
 @if (!_ready)
 {
@@ -88,6 +90,7 @@ else
         _ready = true;
     }
 
+    // Repinta el menú cuando cambia la cuenta o la sincronización.
     private void Refresh() => InvokeAsync(StateHasChanged);
 
     public void Dispose() => Cloud.Changed -= Refresh;

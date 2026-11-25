@@ -1,4 +1,5 @@
 @page "/sumisiones"
+@* Pantalla /sumisiones: ranking de sumisiones a favor y en contra, por mes o de siempre. *@
 
 <PageTitle>@L["Sumisiones"] · BJJ Journal</PageTitle>
 
@@ -62,6 +63,7 @@
     private bool _withPositions;
     private RollEventKind _kind = RollEventKind.SubmissionFor;
 
+    // Ranking de un mes concreto o de siempre.
     private Ranking Data(DateOnly? month = null, bool? allTime = null)
     {
         var m = month ?? _month;
@@ -72,6 +74,7 @@
     private List<RadarChart.Axis> Axes(Ranking data) =>
         data.Items.Take(6).Select(i => new RadarChart.Axis(i.Position is null ? L[i.Name] : $"{L[i.Name]} · {i.Position}", i.Count)).ToList();
 
+    // Elige qué mes mostrar al entrar.
     protected override void OnInitialized()
     {
         // Si el mes actual está vacío, abre el último mes con sumisiones (hasta 2 años atrás).

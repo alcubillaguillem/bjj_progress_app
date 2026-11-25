@@ -1,6 +1,7 @@
 @page "/tecnicas/nueva"
 @page "/tecnicas/{Id:guid}/editar"
 @inject NavigationManager Nav
+@* Pantalla para crear (/tecnicas/nueva) o editar una técnica. *@
 
 <PageTitle>@L[Id is null ? "Nueva técnica" : "Editar técnica"] · BJJ Journal</PageTitle>
 
@@ -92,6 +93,7 @@
         set => _t!.Links = value.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList();
     }
 
+    // Edición: copia de la técnica. Nueva: técnica vacía.
     protected override void OnInitialized()
     {
         // Se edita una copia: si se sale sin guardar, la técnica no cambia.
@@ -104,12 +106,14 @@
         }
     }
 
+    // Crea una posición nueva sin salir del formulario.
     private async Task CreatePositionAsync()
     {
         _t!.PositionId = (await Journal.AddPositionAsync(_newPosition!)).Id;
         _newPosition = null;
     }
 
+    // Valida y guarda (Journal.SaveTechniqueAsync).
     private async Task SaveAsync()
     {
         _error = await Journal.SaveTechniqueAsync(_t!);
@@ -120,6 +124,7 @@
         }
     }
 
+    // Borra la técnica (borrado lógico).
     private async Task DeleteAsync()
     {
         if (!_confirmDelete)

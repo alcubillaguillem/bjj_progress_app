@@ -1,5 +1,6 @@
 @page "/tecnicas/categoria/{Slug}"
 @inject NavigationManager Nav
+@* Pantalla /tecnicas/categoria/{nombre}: las técnicas de una categoría (sumisiones, barridas...). *@
 
 <PageTitle>@(_cat is { } c ? Labels.Of(c) : L["Técnicas"]) · BJJ Journal</PageTitle>
 
@@ -65,6 +66,7 @@
 
     private (int Count, DateTimeOffset Last) Use(Technique t) => _usage.GetValueOrDefault(t.Id);
 
+    // Lee la categoría de la URL y carga sus técnicas.
     protected override void OnParametersSet()
     {
         _cat = Labels.FromSlug(Slug);

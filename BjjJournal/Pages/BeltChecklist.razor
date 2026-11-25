@@ -1,4 +1,5 @@
 @page "/cinturon"
+@* Pantalla /cinturon: técnicas del temario de cada cinturón y tu progreso en cada una. *@
 
 <PageTitle>@L["Cinturón"] · BJJ Journal</PageTitle>
 
@@ -79,6 +80,7 @@
     private IEnumerable<Technique> InBelt(Belt belt) =>
         Journal.Techniques.Where(t => t.CurriculumBelt == belt).OrderBy(t => t.Name, StringComparer.CurrentCultureIgnoreCase);
 
+    // Carga los cinturones con temario y elige cuál mostrar.
     protected override void OnInitialized()
     {
         _belts = Journal.Techniques.Where(t => t.CurriculumBelt != null).Select(t => t.CurriculumBelt!.Value).Distinct().Order().ToList();
@@ -88,6 +90,7 @@
         _belt = _belts.Where(b => b > mine).Cast<Belt?>().FirstOrDefault() ?? (_belts.Contains(mine) ? mine : _belts.FirstOrDefault());
     }
 
+    // Cambia el progreso de una técnica y lo guarda.
     private async Task SetAsync(Technique t, object? value)
     {
         t.Progress = Enum.Parse<ProgressStatus>(value!.ToString()!);

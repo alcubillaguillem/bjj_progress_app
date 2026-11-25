@@ -1,6 +1,7 @@
 @page "/bienvenida"
 @layout BareLayout
 @inject NavigationManager Nav
+@* Pantalla /bienvenida (3 pasos): nombre, cinturón y si quieres cargar las técnicas de ejemplo. *@
 
 <PageTitle>@L["Bienvenida"] · BJJ Journal</PageTitle>
 
@@ -74,6 +75,7 @@
     private bool _seed = true;
     private string? _error;
 
+    // Si ya hay perfil, la bienvenida no hace falta.
     protected override void OnInitialized()
     {
         if (Journal.Data.Profile is not null)
@@ -82,6 +84,7 @@
         }
     }
 
+    // Guarda el perfil (y las técnicas de ejemplo si se marcaron).
     private async Task FinishAsync()
     {
         _error = await Journal.SaveProfileAsync(_profile, loadSeed: _seed);

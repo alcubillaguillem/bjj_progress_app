@@ -1,6 +1,7 @@
 @page "/sesiones/nueva"
 @page "/sesiones/{Id:guid}/editar"
 @inject NavigationManager Nav
+@* Pantalla para crear (/sesiones/nueva) o editar una sesión: datos, técnicas trabajadas y rolls con sus eventos. *@
 
 <PageTitle>@L[Id is null ? "Nueva sesión" : "Editar sesión"] · BJJ Journal</PageTitle>
 
@@ -146,6 +147,7 @@
     private int SubsFor => _s!.Count(RollEventKind.SubmissionFor);
     private int SubsAgainst => _s!.Count(RollEventKind.SubmissionAgainst);
 
+    // Edición: copia de la sesión. Nueva: sesión con los valores de la última.
     protected override void OnInitialized()
     {
         if (Id is { } id)
@@ -171,6 +173,7 @@
 
     private string Color(Guid id) => Journal.Technique(id) is { } t ? Labels.CategoryColor(t.Category) : "var(--muted)";
 
+    // Añade una técnica a la sesión (sin repetirla).
     private void AddTechnique(Guid id)
     {
         if (_s!.Techniques.All(t => t.TechniqueId != id))
@@ -179,8 +182,10 @@
         }
     }
 
+    // Añade un roll con la misma duración que el anterior.
     private void AddRoll() => _s!.Rolls.Add(new Roll { DurationMinutes = _s.Rolls.LastOrDefault()?.DurationMinutes ?? 6 });
 
+    // Valida y guarda la sesión (Journal.SaveSessionAsync).
     private async Task SaveAsync()
     {
         _s!.StartedAt = new DateTimeOffset(_local, TimeZoneInfo.Local.GetUtcOffset(_local));
@@ -192,6 +197,7 @@
         }
     }
 
+    // Borra la sesión (borrado lógico, para que la sync lo propague).
     private async Task DeleteAsync()
     {
         if (!_confirmDelete)
