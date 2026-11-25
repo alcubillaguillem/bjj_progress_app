@@ -7,7 +7,7 @@ Code: https://github.com/alcubillaguillem/bjj_progress_app
 
 Other documents:
 - [Specific, interesting and hard things](hard-things.md)
-- [Load and traffic tests](load-tests.md)
+- [Load and traffic tests](load-tests.md) (also as a PDF report: [BJJ_Journal_Load_Test_Report.pdf](BJJ_Journal_Load_Test_Report.pdf))
 
 ---
 
